@@ -5,6 +5,8 @@ import loadSchema from "./loader";
 import { getComponentImports } from "./getComponents";
 import getPartials from "./getPartials";
 
+import type { PreprocessorGroup } from "svelte/compiler";
+
 interface Options {
   extensions?: string[];
   comments?: boolean;
@@ -19,23 +21,23 @@ interface Options {
   variables?: Config["variables"];
 }
 
-interface PreprocessorReturn {
-  code: string;
-  data?: Record<string, unknown>;
-  map?: string;
-}
+// interface PreprocessorReturn {
+//   code: string;
+//   data?: Record<string, unknown>;
+//   map?: string;
+// }
 
-interface Preprocessor {
-  markup: (args: {
-    content: string;
-    filename: string;
-  }) => Promise<PreprocessorReturn | undefined>;
-}
+// interface Preprocessor {
+//   markup: (args: {
+//     content: string;
+//     filename: string;
+//   }) => Promise<PreprocessorReturn | undefined>;
+// }
 
 /**
  * A Svelte preprocessor for Markdoc files
  */
-export const markdoc = (options: Options = {}): Preprocessor => {
+export const markdoc = (options: Options = {}): PreprocessorGroup => {
   const layoutPath = options.layout;
   const schemaPath = options.schema;
   const comments = options.comments || false;

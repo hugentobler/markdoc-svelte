@@ -14,6 +14,7 @@
   "repository": "https://github.com/CollierCZ/markdoc-svelte",
   "scripts": {
     "build": "rollup -c",
+    "dev": "rollup -c -w",
     "test": "jest",
     "lint": "prettier . --check && eslint .",
     "format": "prettier . --write"
