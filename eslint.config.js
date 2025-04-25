@@ -5,10 +5,12 @@ import eslintSvelteParser from "svelte-eslint-parser";
 import globals from "globals";
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
+import importPlugin from "eslint-plugin-import";
 
 export default [
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
+  importPlugin.configs.recommended,
   eslintConfigPrettier,
   ...eslintPluginSvelte.configs["flat/recommended"],
   ...eslintPluginSvelte.configs["flat/prettier"],

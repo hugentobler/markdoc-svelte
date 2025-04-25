@@ -14,7 +14,7 @@ interface ConfigWithPartialsPath extends Omit<Config, "partials"> {
 }
 
 const loadSchema = async (
-  schemaPath?: string
+  schemaPath?: string,
 ): Promise<ConfigWithPartialsPath> => {
   const schemaDirectory = Path.posix.resolve(schemaPath || DEFAULT_SCHEMA_PATH);
 
@@ -69,7 +69,7 @@ const loadSchema = async (
     schemaPath !== DEFAULT_SCHEMA_PATH
   ) {
     throw new Error(
-      `Can't find the schema at '${schemaDirectory}' from the passed option 'schema: ${schemaPath}`
+      `Can't find the schema at '${schemaDirectory}' from the passed option 'schema: ${schemaPath}`,
     );
   }
 

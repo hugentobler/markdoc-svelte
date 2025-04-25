@@ -42,7 +42,7 @@ const render = (node: RenderableTreeNodes): string => {
     const attributesList = Object.entries(attributes ?? {}).reduce(
       (previous, [key, value]) =>
         `${previous} ${key}="${escapeHtml(String(value))}"`,
-      ""
+      "",
     );
     const openingTag = `<${name}${attributesList}`;
 
@@ -60,7 +60,7 @@ const render = (node: RenderableTreeNodes): string => {
           | {
               [key: string]: Scalar;
             }
-          | RenderableTreeNode[]
+          | RenderableTreeNode[],
       ): string => {
         if (typeof arrayOfChildren === "string")
           return escapeMarkdocBrackets(arrayOfChildren);
@@ -68,8 +68,8 @@ const render = (node: RenderableTreeNodes): string => {
           return arrayOfChildren
             .map((child) =>
               escapeMarkdocBrackets(
-                child?.toString().replace("\n", "") || "" // Don't break the string in the middle // Make sure we end up with strings, not null or undefined
-              )
+                child?.toString().replace("\n", "") || "", // Don't break the string in the middle // Make sure we end up with strings, not null or undefined
+              ),
             )
             .join("\n"); // Put the line breaks back in
         }

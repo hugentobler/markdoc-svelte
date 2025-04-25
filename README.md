@@ -207,19 +207,19 @@ description: Integrate Markdoc into your Next.js app
 
 You can choose to customize how Markdoc files are processed.
 
-| Option            | Type             | Default              | Description                           |
-| ----------------- | ---------------- | -------------------- | ------------------------------------- |
-| `comments`        | boolean          | `true`               | [Comments](#comments)                 |
+| Option            | Type             | Default           | Description                           |
+| ----------------- | ---------------- | ----------------- | ------------------------------------- |
+| `comments`        | boolean          | `true`            | [Comments](#comments)                 |
 | `extensions`      | array of strings | `[".mdoc",".md"]` | [Extensions](#extensions)             |
-| `functions`       | functions object |                      | [Functions](#functions)               |
-| `layout`          | path             |                      | [Layout](#layout)                     |
-| `nodes`           | nodes object     |                      | [Nodes](#nodes)                       |
-| `partials`        | partials object  |                      | [Partials](#partials)                 |
-| `schema`          | path             |                      | [Schema path](#schema-path)           |
-| `tags`            | tags object      |                      | [Tags](#tags)                         |
-| `typographer`     | boolean          | `false`              | [Typographer](#typographer)           |
-| `validationLevel` | string           | `info`               | [Validation level](#validation-level) |
-| `variables`       | variables object |                      | [Variables](#variables)               |
+| `functions`       | functions object |                   | [Functions](#functions)               |
+| `layout`          | path             |                   | [Layout](#layout)                     |
+| `nodes`           | nodes object     |                   | [Nodes](#nodes)                       |
+| `partials`        | partials object  |                   | [Partials](#partials)                 |
+| `schema`          | path             |                   | [Schema path](#schema-path)           |
+| `tags`            | tags object      |                   | [Tags](#tags)                         |
+| `typographer`     | boolean          | `false`           | [Typographer](#typographer)           |
+| `validationLevel` | string           | `info`            | [Validation level](#validation-level) |
+| `variables`       | variables object |                   | [Variables](#variables)               |
 
 ### Comments
 

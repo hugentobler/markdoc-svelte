@@ -18,7 +18,7 @@ const replaceMarkdocBrackets = (characters: string): string => {
 
 export const escapeMarkdocBrackets = (
   str: string,
-  includeOtherHtml = true
+  includeOtherHtml = true,
 ): string => {
   if (BRACKET_ESCAPE_TEST_RE.test(str)) {
     return str.replace(BRACKET_ESCAPE_REPLACE_RE, replaceMarkdocBrackets);
@@ -33,7 +33,7 @@ const replaceEscapedBracket = (escapedBracket: string) => {
   return (
     Object.keys(BRACKET_REPLACEMENTS).find(
       // @ts-ignore
-      (key) => BRACKET_REPLACEMENTS[key] === escapedBracket
+      (key) => BRACKET_REPLACEMENTS[key] === escapedBracket,
     ) || ""
   );
 };
