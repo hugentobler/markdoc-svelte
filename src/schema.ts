@@ -7,7 +7,9 @@ import log from "./logs.ts";
 
 // Describes the structure of the configuration loaded by this function
 interface LoadedConfig {
+  nodes?: Config["nodes"];
   tags?: Config["tags"];
+  variables?: Config["variables"];
   // nodes?: Record<string, Node | string>;
   // functions?: Record<string, FunctionDefinition>;
   // variables?: Record<string, any>;
@@ -95,6 +97,9 @@ const loadSchemas = async (
   async function readDirectory(
     directoryName: "tags",
   ): Promise<Config["tags"] | null>;
+  async function readDirectory(
+    directoryName: "variables",
+  ): Promise<Config["variables"] | null>;
 
   // --- Implementation Signature ---
   // This signature must be compatible with all overloads. Using 'unknown' is
@@ -121,6 +126,11 @@ const loadSchemas = async (
       for (const potentialPath of pathsToCheck) {
         if (FS.existsSync(potentialPath)) {
           moduleFile = potentialPath;
+          if (moduleFile.indexOf("index.ts") > 0) {
+            log.info(
+              `Include .ts file extension when importing ${directoryName} into ${moduleFile}`,
+            );
+          }
           break;
         }
       }
@@ -153,16 +163,17 @@ const loadSchemas = async (
   }
 
   // --- Load Specific Schema Parts ---
-  const [tags /*, nodes, functions */] = await Promise.all([
+  const [nodes, tags, variables /*, nodes, functions */] = await Promise.all([
+    readDirectory("nodes"),
     readDirectory("tags"),
-    // readDirectory("nodes"),
+    readDirectory("variables"),
     // readDirectory("functions"),
   ]);
 
-  // Assign to the config, checking for null
-  if (tags) {
-    loadedConfigParts.tags = tags; // Type-safe assignment
-  }
+  // Type-safe assignment, checking for null
+  if (nodes) loadedConfigParts.nodes = nodes;
+  if (tags) loadedConfigParts.tags = tags;
+  if (variables) loadedConfigParts.variables = variables;
   // if (functions) {
   //     loadedConfigParts.functions = functions; // Type-safe assignment
   // }
@@ -170,9 +181,14 @@ const loadSchemas = async (
 
   // --- Final Assembly ---
   const finalConfig: LoadedConfig = {
+    nodes: loadedConfigParts.nodes,
     tags: loadedConfigParts.tags,
+    variables: loadedConfigParts.variables,
     // nodes: loadedConfigParts.nodes, // etc.
   };
+
+  log.debug(`Dependencies: ${schemaDependencies.toString()}`);
+  log.debug(`Final Config: ${JSON.stringify(finalConfig)}`);
 
   return {
     config: finalConfig,
