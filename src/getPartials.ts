@@ -1,6 +1,8 @@
-import MarkdocSource, { Config } from "@markdoc/markdoc";
 import FS from "fs";
 import Path from "path";
+
+import MarkdocSource from "@markdoc/markdoc";
+import type {Config} from "@markdoc/markdoc";
 
 const getPartials = (
   partialsDirectory: string | undefined,

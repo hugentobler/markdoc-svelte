@@ -1,6 +1,7 @@
-import { Config } from "@markdoc/markdoc";
 import FS from "fs";
 import Path from "path";
+
+import type { Config } from "@markdoc/markdoc";
 
 const DEFAULT_SCHEMA_PATH = "./markdoc";
 

@@ -1,6 +1,7 @@
-import { Config } from "@markdoc/markdoc";
 import FS from "fs";
 import Path from "path";
+
+import type { Config } from "@markdoc/markdoc";
 
 export const getComponentImports = (
   schema: Config,
@@ -9,7 +10,7 @@ export const getComponentImports = (
   let importStatement = "";
 
   const addImportsForSvelteComponents = (schemaArray: Config["tags"]) => {
-    for (let name in schemaArray) {
+    for (const name in schemaArray) {
       const tagOrNode = schemaArray[name];
       // Only include objects
       if (!tagOrNode || typeof tagOrNode === "string") continue;

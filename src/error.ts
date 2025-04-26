@@ -1,6 +1,6 @@
-import { ValidateError } from "@markdoc/markdoc";
+import type { ValidateError } from "@markdoc/markdoc";
 
-import { ValidationLevel } from "./types";
+import type { ValidationLevel } from "./types";
 
 /**
  * Map Markdoc error levels to a numeric value for comparison, higher number means more severe

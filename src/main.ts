@@ -1,14 +1,14 @@
-import Markdoc, { Config, ParserArgs } from "@markdoc/markdoc";
+import Markdoc from "@markdoc/markdoc";
+import type { Config, ParserArgs } from "@markdoc/markdoc";
 import MarkdownIt from "markdown-it";
-import render from "./render";
-import YAML from "yaml";
-import loadSchema from "./loader";
-import { getComponentImports } from "./getComponents";
-import getPartials from "./getPartials";
-
 import type { PreprocessorGroup } from "svelte/compiler";
+import YAML from "yaml";
 
-import { handleValidationErrors } from "./error";
+import { handleValidationErrors } from "./error.ts";
+import { getComponentImports } from "./getComponents.ts";
+import getPartials from "./getPartials.ts";
+import loadSchema from "./loader.ts";
+import render from "./render.ts";
 import type { ValidationLevel } from "./types";
 
 /**
@@ -140,9 +140,7 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       const frontmatterString = isFrontmatter
         ? `<script context="module">\n` +
           `\texport const metadata = ${JSON.stringify(frontmatter)};\n` +
-          `\tconst { ${Object.keys(frontmatter as Record<string, unknown>).join(
-            ", ",
-          )} } = metadata;\n` +
+          `\tconst { ${Object.keys(frontmatter).join(", ")} } = metadata;\n` +
           "</script>\n"
         : "";
 
