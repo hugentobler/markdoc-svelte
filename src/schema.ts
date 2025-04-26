@@ -3,6 +3,8 @@ import Path from "path";
 
 import type { Config } from "@markdoc/markdoc";
 
+import log from "./logs.ts";
+
 // Describes the structure of the configuration loaded by this function
 interface LoadedConfig {
   tags?: Config["tags"];
@@ -14,9 +16,9 @@ interface LoadedConfig {
 
 // Describes the overall return value of loadSchema
 interface LoadedSchemaResult {
-    config: LoadedConfig;
-    dependencies: string[]; // Preprocessor markup dependencies
-    resolvedSchemaPath: string | null; // The actual directory path that was found and used
+  config: LoadedConfig;
+  dependencies: string[]; // Preprocessor markup dependencies
+  resolvedSchemaPath: string | null; // The actual directory path that was found and used
 }
 
 // Helper to normalize path separators to POSIX style (forward slashes)
@@ -44,7 +46,9 @@ const normalizeAbsolutePath = (absolutePath: string): string => {
  *          - `resolvedSchemaPath`: The relative path from `schemaPaths` that was found,
  *                                 or `null` if none were found.
  */
-const loadSchemas = async (schemaPaths: string[]): Promise<LoadedSchemaResult> => {
+const loadSchemas = async (
+  schemaPaths: string[],
+): Promise<LoadedSchemaResult> => {
   let resolvedSchemaPath: string | null = null;
   let schemaDirectory: string | null = null;
   const schemaDependencies: string[] = [];
@@ -62,8 +66,8 @@ const loadSchemas = async (schemaPaths: string[]): Promise<LoadedSchemaResult> =
 
   // Return early if no valid directory found
   if (!schemaDirectory) {
-    console.warn(
-      `[markdoc-svelte] No schemas imported as no valid schema directory found. Tried: ${schemaPaths.join(", ")}`,
+    log.warn(
+      `No schemas imported as no valid schema directory found. Tried: ${schemaPaths.join(", ")}`,
     );
     return { config: {}, dependencies: [], resolvedSchemaPath: null };
   }
@@ -75,18 +79,22 @@ const loadSchemas = async (schemaPaths: string[]): Promise<LoadedSchemaResult> =
     normalizeAbsolutePath(Path.posix.resolve(schemaDirectory, subDirectory));
 
   /**
-    * Reads the default export from JS/TS files in a specific subdirectory
-    * within the resolved schema directory (e.g., 'tags', 'functions').
-    * Handles finding .ts, .js, index.ts, index.js files.
-    * Used internally by `loadSchemas`.
-    *
-    * @param directoryName The name of the subdirectory (e.g., "tags").
-    * @returns A Promise resolving to the default export object if found, otherwise null.
-    *          The specific type depends on the overload used by the caller.
-    */
+   * Reads the default export from JS/TS files in a specific subdirectory
+   * within the resolved schema directory (e.g., 'tags', 'functions').
+   * Handles finding .ts, .js, index.ts, index.js files.
+   * Used internally by `loadSchemas`.
+   *
+   * @param directoryName The name of the subdirectory (e.g., "tags").
+   * @returns A Promise resolving to the default export object if found, otherwise null.
+   *          The specific type depends on the overload used by the caller.
+   */
   // --- Define readDirectory Overloads (Public Signatures) ---
-  async function readDirectory(directoryName: 'tags'): Promise<Config['tags'] | null>;
-  async function readDirectory(directoryName: 'nodes'): Promise<Config['nodes'] | null>;
+  async function readDirectory(
+    directoryName: "nodes",
+  ): Promise<Config["nodes"] | null>;
+  async function readDirectory(
+    directoryName: "tags",
+  ): Promise<Config["tags"] | null>;
 
   // --- Implementation Signature ---
   // This signature must be compatible with all overloads. Using 'unknown' is
@@ -94,7 +102,7 @@ const loadSchemas = async (schemaPaths: string[]): Promise<LoadedSchemaResult> =
   // because the overloads provide narrower types. We disable it only for this line.
   // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   async function readDirectory(directoryName: string): Promise<unknown | null> {
-     if (!schemaDirectory) return null;
+    if (!schemaDirectory) return null;
 
     try {
       const moduleBase = getNormalizedPathInSchemaDirectory(directoryName);
@@ -104,8 +112,10 @@ const loadSchemas = async (schemaPaths: string[]): Promise<LoadedSchemaResult> =
       // Check both the base file and the index file
       // for example: tags.ts and tags/index.ts
       const pathsToCheck = [
-        `${moduleBase}.ts`, `${moduleBase}.js`,
-        `${moduleBase}/index.ts`, `${moduleBase}/index.js`,
+        `${moduleBase}.ts`,
+        `${moduleBase}.js`,
+        `${moduleBase}/index.ts`,
+        `${moduleBase}/index.js`,
       ];
 
       for (const potentialPath of pathsToCheck) {
@@ -120,13 +130,15 @@ const loadSchemas = async (schemaPaths: string[]): Promise<LoadedSchemaResult> =
         // --- CONDITIONAL Cache Busting ---
         // To overcome default caching of dynamic imports in Vite
         // So that schema changes are HMR'd in development mode
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === "development") {
           importPath += `?t=${Date.now()}`;
         }
         // ---------------------------------
 
         // Dynamically import module and save the file path as a dependency
-        const importedModule = await import(importPath) as { default?: unknown};
+        const importedModule = (await import(importPath)) as {
+          default?: unknown;
+        };
         schemaDependencies.push(moduleFile);
 
         // Return the default export
@@ -135,21 +147,21 @@ const loadSchemas = async (schemaPaths: string[]): Promise<LoadedSchemaResult> =
       // No file found for this directory name
       return null;
     } catch (error) {
-      console.error(`[Markdoc Loader] Error loading schema section '${directoryName}':`, error);
+      log.error(`Error when loading schema from '${directoryName}':`, error);
       return null;
     }
-  };
+  }
 
   // --- Load Specific Schema Parts ---
   const [tags /*, nodes, functions */] = await Promise.all([
-      readDirectory("tags"),
-      // readDirectory("nodes"),
-      // readDirectory("functions"),
+    readDirectory("tags"),
+    // readDirectory("nodes"),
+    // readDirectory("functions"),
   ]);
 
   // Assign to the config, checking for null
   if (tags) {
-      loadedConfigParts.tags = tags; // Type-safe assignment
+    loadedConfigParts.tags = tags; // Type-safe assignment
   }
   // if (functions) {
   //     loadedConfigParts.functions = functions; // Type-safe assignment
@@ -158,8 +170,8 @@ const loadSchemas = async (schemaPaths: string[]): Promise<LoadedSchemaResult> =
 
   // --- Final Assembly ---
   const finalConfig: LoadedConfig = {
-      tags: loadedConfigParts.tags,
-      // nodes: loadedConfigParts.nodes, // etc.
+    tags: loadedConfigParts.tags,
+    // nodes: loadedConfigParts.nodes, // etc.
   };
 
   return {

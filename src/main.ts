@@ -4,38 +4,22 @@ import MarkdownIt from "markdown-it";
 import type { PreprocessorGroup } from "svelte/compiler";
 import YAML from "yaml";
 
-import { handleValidationErrors } from "./error.ts";
+import { handleValidationErrors } from "./errors.ts";
 import { getComponentImports } from "./getComponents.ts";
 import getPartials from "./getPartials.ts";
+import log from "./logs.ts";
 import render from "./render.ts";
 import loadSchemas from "./schema.ts";
-import type { ValidationLevel } from "./types";
+import type { Options } from "./types";
 
-/**
- * Configuration options for the Markdoc preprocessor
- * @interface Options
- */
-interface Options {
-  /** File extentions to preprocess (default: [".mdoc", ".md"]) */
-  extensions?: string[];
-  /** Enable markdown parser comments (default: false) */
-  comments?: boolean;
-  /** Enable markdown parser to autoconvert URL-like text to links (default: false) */
-  linkify?: boolean;
-  /** Enable markdown parser language-neutral replacement + quotes beautification (default: false) */
-  typographer?: boolean;
-  /** Sets the validation level the preprocessor will throw an error and stop the build (default: "error") */
-  validationLevel?: ValidationLevel;
-  /** Customize the Markdoc schemas directory path (relative path to Svelte config) */
-  schema?: string;
-
-  layout?: string;
-  functions?: Config["functions"];
-  nodes?: Config["nodes"];
-  partials?: string;
-  tags?: Config["tags"];
-  variables?: Config["variables"];
-}
+const validOptionKeys: (keyof Options)[] = [
+  "extensions",
+  "comments",
+  "linkify",
+  "typographer",
+  "validationLevel",
+  "schemaDirectory",
+];
 
 /**
  * Creates a Svelte preprocessor for Markdoc files
@@ -43,11 +27,22 @@ interface Options {
  * @returns {PreprocessorGroup} A Svelte preprocessor for Markdoc files
  */
 export const markdoc = (options: Options = {}): PreprocessorGroup => {
+  // Warn about invalid options
+  for (const key in options) {
+    if (!validOptionKeys.includes(key as keyof Options)) {
+      log.warn(
+        `Invalid option "${key}" provided and ignored.  Please check the documentation for valid options.`,
+      );
+    }
+  }
+
   const extensions = options.extensions || [".mdoc", ".md"];
   const comments = options.comments || false;
   const typographer = options.typographer || false;
   const linkify = options.linkify || false;
-  const schemaPaths = options.schema ? [options.schema]  : ["./markdoc", "./src/markdoc"];
+  const schemaPaths = options.schemaDirectory
+    ? [options.schemaDirectory]
+    : ["./markdoc", "./src/markdoc"];
 
   const layoutPath = options.layout;
 
@@ -102,9 +97,10 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
         ? (YAML.parse(ast.attributes.frontmatter) as Record<string, unknown>)
         : {};
       /**
-      * Load Markdoc schemas from directory
-      */
-      const schemaFromPath = await loadSchemas(schemaPaths);
+       * Load Markdoc schemas from directory
+       */
+      const { config: loadedConfig, dependencies } =
+        await loadSchemas(schemaPaths);
 
       // const {
       //   partials: partialsDirectoryFromSchema,
@@ -130,16 +126,15 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       //       ? getPartials(partialsDirectory || schemaFromPath["partials"])
       //       : undefined,
       // };
-      const markdocConfig = schemaFromPath.config;
 
       /**
        * Check if Markdoc AST is valid
        * Separate errors into breaking and non-breaking and log them appropriately
        */
-      const errors = Markdoc.validate(ast, markdocConfig);
+      const errors = Markdoc.validate(ast, loadedConfig);
       handleValidationErrors(errors, validationLevel, filename);
 
-      const transformedContent = await Markdoc.transform(ast, markdocConfig);
+      const transformedContent = await Markdoc.transform(ast, loadedConfig);
 
       const svelteContent = render(transformedContent);
       const frontmatterString = isFrontmatter
@@ -156,7 +151,7 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
 
       const componentsString = getComponentImports(
         // schemaWithoutPartials,
-        markdocConfig,
+        loadedConfig,
         "/src/lib/components",
       );
       const layoutOpenString =
@@ -186,7 +181,7 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       return {
         code: code,
         // data: frontmatter,
-        dependencies: schemaFromPath.dependencies
+        dependencies,
       };
     },
   };

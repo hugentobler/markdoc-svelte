@@ -1,5 +1,6 @@
 import type { ValidateError } from "@markdoc/markdoc";
 
+import log from "./logs";
 import type { ValidationLevel } from "./types";
 
 /**
@@ -57,32 +58,32 @@ export function handleValidationErrors(
     const endLine = lines[1];
     const locString = `${filename}:${startLine}${startLine !== endLine ? `-${endLine}` : ""}`;
 
-    const message = `[markdoc-svelte] ${errorDetails.level.toUpperCase()} (${type}): ${errorDetails.message} at ${locString}`;
+    const message = `(${type}) ${errorDetails.message} at ${locString}`;
 
-    switch (error.error.level) {
+    switch (errorDetails.level) {
       case "debug":
-        console.debug(message);
+        log.debug(message);
         break;
       case "info":
-        console.info(message);
+        log.info(message);
         break;
       case "warning":
-        console.warn(message);
+        log.warn(message);
         break;
       // 'error' and 'critical' levels when they are below the breakingLevel
       case "error":
       case "critical":
       default:
-        console.error(message); // Log higher levels as errors
+        log.error(message); // Log higher levels as errors
         break;
     }
   }
 
   // Throw if breaking errors exist
   if (breakingErrors.length > 0) {
-    const summary = `[markdoc-svelte] Markdoc validation failed in ${filename}. Found ${breakingErrors.length} error${breakingErrors.length > 1 ? "s" : ""} at or above configured level "${validationLevel}".`;
+    const summary = `Markdoc validation failed in ${filename}. Found ${breakingErrors.length} error${breakingErrors.length > 1 ? "s" : ""} at or above configured level "${validationLevel}".`;
 
-    console.error(summary);
+    log.error(summary);
 
     // Create a more readable list of breaking errors for the message
     const detailedErrorMessage = breakingErrors
@@ -96,7 +97,7 @@ export function handleValidationErrors(
       .join("\n");
 
     const errorMessage = `${summary}\n\n${detailedErrorMessage}\n\n`;
-    console.error(errorMessage);
+    log.error(errorMessage);
 
     throw new Error(errorMessage);
   }

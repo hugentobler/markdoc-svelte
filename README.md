@@ -4,19 +4,21 @@ Preprocess [Markdoc](https://markdoc.io/) files for use in Svelte Kit sites.
 
 ## Use
 
-Add the `.md` extension and the `markdoc` preprocessor to your Svelte Kit configuration:
+To preprocess Markdown files with Markdoc, add ".md" or ".mdoc" to your Svelte Kit configuration extensions. And import the `markdoc-svelte` as a preprocessor.
 
 ```javascript
 import { markdoc } from "markdoc-svelte";
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-  extensions: [".svelte", ".md"],
+  extensions: [".svelte", ".mdoc", ".md"],
   preprocess: [markdoc()],
 };
 ```
 
-## Add custom schema
+## Customize Markdoc schema
+
+The main way to use Markdoc is defining schemas that it parses to augment your Markdown. USING CONFIG OBJECTS.
 
 Markdoc allows you to configure various options for parsing:
 
@@ -271,20 +273,22 @@ See the options in action at the [markdown-it demo](https://markdown-it.github.i
 (select or deselect `typographer`).
 Defaults to false.
 
-### Extensions
+### File Extensions
 
-By default, files ending in `.mdoc` and `.md` are preprocessed.
-To use other extensions, add them to the `extensions` array in the options:
+By default, only files ending in `.mdoc` and `.md` are preprocessed.
+To set other file extensions, override default extensions by setting the `extensions` option.
+
+Remember to include your custom file extensions in the Svelte Kit config `extensions` array too.
 
 ```javascript
 import { markdoc } from "markdoc-svelte";
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-  extensions: [".svelte", ".mdoc", ".md"],
+  extensions: [".svelte", ".md", ".markdown"],
   preprocess: [
     markdoc({
-      extensions: [".svelte", ".mdoc", ".md"],
+      extensions: [".md", ".markdown"],
     }),
   ],
 };
