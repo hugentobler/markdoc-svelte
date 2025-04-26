@@ -96,6 +96,7 @@ export function handleValidationErrors(
       .join("\n");
 
     const errorMessage = `${summary}\n\n${detailedErrorMessage}\n\n`;
+    console.error(errorMessage);
 
     throw new Error(errorMessage);
   }

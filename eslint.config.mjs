@@ -50,6 +50,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ["**/*.js", "coverage", "dist", "node_modules"],
+    ignores: ["**/*.js", "**/*.mjs", "coverage", "dist", "node_modules"],
   },
 );

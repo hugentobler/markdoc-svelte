@@ -7,8 +7,8 @@ import YAML from "yaml";
 import { handleValidationErrors } from "./error.ts";
 import { getComponentImports } from "./getComponents.ts";
 import getPartials from "./getPartials.ts";
-import loadSchema from "./loader.ts";
 import render from "./render.ts";
+import loadSchemas from "./schema.ts";
 import type { ValidationLevel } from "./types";
 
 /**
@@ -26,8 +26,10 @@ interface Options {
   typographer?: boolean;
   /** Sets the validation level the preprocessor will throw an error and stop the build (default: "error") */
   validationLevel?: ValidationLevel;
-  layout?: string;
+  /** Customize the Markdoc schemas directory path (relative path to Svelte config) */
   schema?: string;
+
+  layout?: string;
   functions?: Config["functions"];
   nodes?: Config["nodes"];
   partials?: string;
@@ -45,9 +47,9 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
   const comments = options.comments || false;
   const typographer = options.typographer || false;
   const linkify = options.linkify || false;
+  const schemaPaths = options.schema ? [options.schema]  : ["./markdoc", "./src/markdoc"];
 
   const layoutPath = options.layout;
-  const schemaPath = options.schema;
 
   const validationLevel = options.validationLevel || "error";
   const {
@@ -99,33 +101,36 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       const frontmatter = isFrontmatter
         ? (YAML.parse(ast.attributes.frontmatter) as Record<string, unknown>)
         : {};
+      /**
+      * Load Markdoc schemas from directory
+      */
+      const schemaFromPath = await loadSchemas(schemaPaths);
 
-      const schemaFromPath = await loadSchema(schemaPath);
-
-      const {
-        partials: partialsDirectoryFromSchema,
-        variables: variablesFromSchema,
-        ...schemaFromPathWithoutPartials
-      } = schemaFromPath;
+      // const {
+      //   partials: partialsDirectoryFromSchema,
+      //   variables: variablesFromSchema,
+      //   ...schemaFromPathWithoutPartials
+      // } = schemaFromPath;
 
       // Include schema parts passed as options
       // But ignore if undefined
       // Leave out partials until directory processed
-      const schemaWithoutPartials = {
-        ...schemaFromPathWithoutPartials,
-        ...(functions && { functions }),
-        ...(nodes && { nodes }),
-        ...(tags && { tags }),
-      };
+      // const schemaWithoutPartials = {
+      //   ...schemaFromPathWithoutPartials,
+      //   ...(functions && { functions }),
+      //   ...(nodes && { nodes }),
+      //   ...(tags && { tags }),
+      // };
 
-      const markdocConfig = {
-        ...schemaWithoutPartials,
-        variables: { frontmatter, ...(variables || variablesFromSchema) },
-        partials:
-          partialsDirectory || schemaFromPath["partials"]
-            ? getPartials(partialsDirectory || schemaFromPath["partials"])
-            : undefined,
-      };
+      // const markdocConfig = {
+      //   ...schemaWithoutPartials,
+      //   variables: { frontmatter, ...(variables || variablesFromSchema) },
+      //   partials:
+      //     partialsDirectory || schemaFromPath["partials"]
+      //       ? getPartials(partialsDirectory || schemaFromPath["partials"])
+      //       : undefined,
+      // };
+      const markdocConfig = schemaFromPath.config;
 
       /**
        * Check if Markdoc AST is valid
@@ -150,7 +155,8 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       // - I MAY NOT NEED TO USE TAGS AFTER ALL. Nodes can be set render strings too. In that case, maybe I can access the name of the component I want from an attribute, then pass it to Render. Then let the getcomponents function handle the rest by modifying it to look at Tags too.
 
       const componentsString = getComponentImports(
-        schemaWithoutPartials,
+        // schemaWithoutPartials,
+        markdocConfig,
         "/src/lib/components",
       );
       const layoutOpenString =
@@ -180,6 +186,7 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       return {
         code: code,
         // data: frontmatter,
+        dependencies: schemaFromPath.dependencies
       };
     },
   };
