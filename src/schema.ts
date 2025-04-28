@@ -10,112 +10,72 @@ interface LoadedConfig {
   nodes?: Config["nodes"];
   tags?: Config["tags"];
   variables?: Config["variables"];
-  // nodes?: Record<string, Node | string>;
-  // functions?: Record<string, FunctionDefinition>;
-  // variables?: Record<string, any>;
-  // partials?: string; // If you load the partials path here
+  functions?: Config["functions"];
 }
 
 // Describes the overall return value of loadSchema
 interface LoadedSchemaResult {
   config: LoadedConfig;
   dependencies: string[]; // Preprocessor markup dependencies
-  resolvedSchemaPath: string | null; // The actual directory path that was found and used
 }
 
-// Helper to normalize path separators to POSIX style (forward slashes)
-const normalizeAbsolutePath = (absolutePath: string): string => {
-  return absolutePath.split(Path.sep).join(Path.posix.sep);
-};
-
 /**
- * Asynchronously searches specified paths for a Markdoc schema directory and loads
- * configuration components (like tags, functions, variables) from predefined files
- * (e.g., 'tags.ts', 'functions/index.js') within that directory.
+ * Asynchronously loads Markdoc configuration components (tags, functions, variables, nodes)
+ * from predefined files (e.g., 'tags.ts', 'functions/index.js') within a given directory.
  *
- * It checks paths in the provided order and uses the first valid directory found.
  * It dynamically imports modules from files like `tags.ts`, `tags.js`,
  * `tags/index.ts`, or `tags/index.js` (and similarly for `functions`, `nodes`, etc.).
  * Cache-busting is added to imports in development mode to aid HMR.
  *
  * @async
- * @param schemaPaths An array of potential relative paths to the schema directory.
- *                    The function will search these paths in order.
+ * @param schemaDirectory The absolute, normalized path to the schema directory. If null, returns empty config.
  * @returns A Promise resolving to a `LoadedSchemaResult` object containing:
  *          - `config`: The assembled Markdoc configuration (`LoadedConfig`).
- *          - `dependencies`: An array of absolute file paths the configuration depends on,
- *                           useful for file watchers and HMR.
- *          - `resolvedSchemaPath`: The relative path from `schemaPaths` that was found,
- *                                 or `null` if none were found.
+ *          - `dependencies`: An array of absolute file paths the configuration depends on.
  */
 const loadSchemas = async (
-  schemaPaths: string[],
+  schemaDirectory: string,
 ): Promise<LoadedSchemaResult> => {
-  let resolvedSchemaPath: string | null = null;
-  let schemaDirectory: string | null = null;
   const schemaDependencies: string[] = [];
   const loadedConfigParts: Partial<LoadedConfig> = {};
 
-  // Discover the first directory from schemaPaths that exists
-  for (const relativePath of schemaPaths) {
-    const potentialPath = Path.posix.resolve(relativePath);
-    if (FS.existsSync(potentialPath)) {
-      schemaDirectory = potentialPath;
-      resolvedSchemaPath = relativePath;
-      break; // Use the first one found
-    }
-  }
-
-  // Return early if no valid directory found
-  if (!schemaDirectory) {
-    log.warn(
-      `No schemas imported as no valid schema directory found. Tried: ${schemaPaths.join(", ")}`,
-    );
-    return { config: {}, dependencies: [], resolvedSchemaPath: null };
-  }
-
-  // --- Directory Found - Proceed with loading ---
-
   // Helper to resolve paths within the found schema directory
-  const getNormalizedPathInSchemaDirectory = (subDirectory: string) =>
-    normalizeAbsolutePath(Path.posix.resolve(schemaDirectory, subDirectory));
+  // Expects schemaDirectory to be absolute and normalized already
+  const getPathInSchemaDirectory = (subPath: string) =>
+    Path.posix.join(schemaDirectory, subPath); // Use posix.join for consistency
 
   /**
-   * Reads the default export from JS/TS files in a specific subdirectory
+   * Reads the default export from JS/TS files for a specific config part
    * within the resolved schema directory (e.g., 'tags', 'functions').
    * Handles finding .ts, .js, index.ts, index.js files.
    * Used internally by `loadSchemas`.
    *
-   * @param directoryName The name of the subdirectory (e.g., "tags").
+   * @param configPartName The name of the config part (e.g., "tags").
    * @returns A Promise resolving to the default export object if found, otherwise null.
-   *          The specific type depends on the overload used by the caller.
    */
   // --- Define readDirectory Overloads (Public Signatures) ---
-  async function readDirectory(
-    directoryName: "nodes",
+  async function readConfigPart(
+    configPartName: "nodes",
   ): Promise<Config["nodes"] | null>;
-  async function readDirectory(
-    directoryName: "tags",
+  async function readConfigPart(
+    configPartName: "tags",
   ): Promise<Config["tags"] | null>;
-  async function readDirectory(
-    directoryName: "variables",
+  async function readConfigPart(
+    configPartName: "variables",
   ): Promise<Config["variables"] | null>;
+  async function readConfigPart(
+    configPartName: "functions",
+  ): Promise<Config["functions"] | null>;
 
   // --- Implementation Signature ---
-  // This signature must be compatible with all overloads. Using 'unknown' is
-  // type-safe but may trigger specific lint rules like 'no-redundant-type-constituents'
-  // because the overloads provide narrower types. We disable it only for this line.
-  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-  async function readDirectory(directoryName: string): Promise<unknown | null> {
-    if (!schemaDirectory) return null;
-
+  async function readConfigPart(
+    configPartName: string,
+    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+  ): Promise<unknown | null> {
     try {
-      const moduleBase = getNormalizedPathInSchemaDirectory(directoryName);
+      const moduleBase = getPathInSchemaDirectory(configPartName);
       let moduleFile: string | null = null;
 
-      // Support loading .ts and .js schemas
-      // Check both the base file and the index file
-      // for example: tags.ts and tags/index.ts
       const pathsToCheck = [
         `${moduleBase}.ts`,
         `${moduleBase}.js`,
@@ -124,11 +84,12 @@ const loadSchemas = async (
       ];
 
       for (const potentialPath of pathsToCheck) {
+        // Use FS.existsSync with the potential path directly
         if (FS.existsSync(potentialPath)) {
-          moduleFile = potentialPath;
-          if (moduleFile.indexOf("index.ts") > 0) {
+          moduleFile = potentialPath; // Already absolute and normalized
+          if (moduleFile.includes("/index.")) {
             log.info(
-              `Include .ts file extension when importing ${directoryName} into ${moduleFile}`,
+              `Remember to include .ts file extension when importing ${configPartName} into ${moduleFile}`,
             );
           }
           break;
@@ -137,63 +98,55 @@ const loadSchemas = async (
 
       if (moduleFile) {
         let importPath = `file://${moduleFile}`;
-        // --- CONDITIONAL Cache Busting ---
-        // To overcome default caching of dynamic imports in Vite
-        // So that schema changes are HMR'd in development mode
         if (process.env.NODE_ENV === "development") {
           importPath += `?t=${Date.now()}`;
         }
-        // ---------------------------------
 
-        // Dynamically import module and save the file path as a dependency
         const importedModule = (await import(importPath)) as {
           default?: unknown;
         };
+        // Add the *actual file found* as a dependency
         schemaDependencies.push(moduleFile);
 
-        // Return the default export
         return importedModule?.default || null;
       }
-      // No file found for this directory name
       return null;
     } catch (error) {
-      log.error(`Error when loading schema from '${directoryName}':`, error);
+      log.error(`Error loading schema part '${configPartName}':`, error);
       return null;
     }
   }
 
   // --- Load Specific Schema Parts ---
-  const [nodes, tags, variables /*, nodes, functions */] = await Promise.all([
-    readDirectory("nodes"),
-    readDirectory("tags"),
-    readDirectory("variables"),
-    // readDirectory("functions"),
+  const [nodes, tags, variables, functions] = await Promise.all([
+    readConfigPart("nodes"),
+    readConfigPart("tags"),
+    readConfigPart("variables"),
+    readConfigPart("functions"),
   ]);
 
   // Type-safe assignment, checking for null
   if (nodes) loadedConfigParts.nodes = nodes;
   if (tags) loadedConfigParts.tags = tags;
   if (variables) loadedConfigParts.variables = variables;
-  // if (functions) {
-  //     loadedConfigParts.functions = functions; // Type-safe assignment
-  // }
-  // TODO: Add checks for nodes, functions etc. here if loaded
+  if (functions) loadedConfigParts.functions = functions;
 
   // --- Final Assembly ---
   const finalConfig: LoadedConfig = {
     nodes: loadedConfigParts.nodes,
     tags: loadedConfigParts.tags,
     variables: loadedConfigParts.variables,
-    // nodes: loadedConfigParts.nodes, // etc.
+    functions: loadedConfigParts.functions,
   };
 
-  log.debug(`Dependencies: ${schemaDependencies.toString()}`);
-  log.debug(`Final Config: ${JSON.stringify(finalConfig)}`);
+  log.debug(`Schema Dependencies: ${schemaDependencies.toString()}`);
+  log.debug(
+    `Loaded Schema Config (excluding partials): ${JSON.stringify(finalConfig)}`,
+  );
 
   return {
     config: finalConfig,
-    dependencies: [...new Set(schemaDependencies)],
-    resolvedSchemaPath: resolvedSchemaPath,
+    dependencies: [...new Set(schemaDependencies)], // Ensure uniqueness
   };
 };
 

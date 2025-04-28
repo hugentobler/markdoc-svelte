@@ -12,7 +12,7 @@ export type ValidationLevel =
  * @interface Options
  */
 export interface Options {
-  /** File extentions to preprocess (default: [".mdoc", ".md"]) */
+  /** File extensions to preprocess (default: [".mdoc", ".md"]) */
   extensions?: string[];
   /** Enable markdown parser comments (default: false) */
   comments?: boolean;
@@ -22,13 +22,14 @@ export interface Options {
   typographer?: boolean;
   /** Sets the validation level the preprocessor will throw an error and stop the build (default: "error") */
   validationLevel?: ValidationLevel;
-  /** Customize the Markdoc schemas directory path (relative path to Svelte config) */
+  /** Customize the Markdoc Schemas directory path (relative path to Svelte config) */
   schemaDirectory?: string;
+  /** Specify a directory to import files (with .extensions) to use as Markdoc Partials (relative path to Svelte config) */
+  partialsDirectory?: string;
 
   layout?: string;
   functions?: Config["functions"];
   nodes?: Config["nodes"];
-  partials?: string;
   tags?: Config["tags"];
   variables?: Config["variables"];
 }

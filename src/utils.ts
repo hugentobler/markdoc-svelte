@@ -1,3 +1,5 @@
+import Path from "path";
+
 import MarkdownIt from "markdown-it";
 
 const { escapeHtml } = MarkdownIt().utils;

@@ -5,9 +5,10 @@ import type { PreprocessorGroup } from "svelte/compiler";
 import YAML from "yaml";
 
 import { handleValidationErrors } from "./errors.ts";
+import { findFirstExistingDirectory } from "./files.ts";
 import { getComponentImports } from "./getComponents.ts";
-import getPartials from "./getPartials.ts";
 import log from "./logs.ts";
+import loadPartials from "./partials.ts";
 import render from "./render.ts";
 import loadSchemas from "./schema.ts";
 import type { Options } from "./types";
@@ -19,6 +20,7 @@ const validOptionKeys: (keyof Options)[] = [
   "typographer",
   "validationLevel",
   "schemaDirectory",
+  "partialsDirectory",
 ];
 
 /**
@@ -36,13 +38,17 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
     }
   }
 
-  const extensions = options.extensions || [".mdoc", ".md"];
-  const comments = options.comments || false;
-  const typographer = options.typographer || false;
-  const linkify = options.linkify || false;
+  const extensions =
+    options.extensions && options.extensions.length > 0
+      ? options.extensions
+      : [".mdoc", ".md"];
+  const comments = options.comments ?? false;
+  const typographer = options.typographer ?? false;
+  const linkify = options.linkify ?? false;
   const schemaPaths = options.schemaDirectory
     ? [options.schemaDirectory]
     : ["./markdoc", "./src/markdoc"];
+  const partialsPath = options.partialsDirectory;
 
   const layoutPath = options.layout;
 
@@ -58,18 +64,14 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
   return {
     name: "markdoc-svelte",
     markup: async ({ content, filename }) => {
-      /**
-       * Only preprocess files that end with options.extensions
-       */
+      // --- Check if file is a Markdoc file ---
       if (
         !filename ||
         !extensions.find((extension) => filename.endsWith(extension))
       )
         return;
-      /**
-       * Create config for token parser
-       * Then create and configure the Markdoc tokenizer
-       */
+
+      // --- Tokenization ---
       const markdownItConfig: MarkdownIt.Options = {
         linkify,
         typographer,
@@ -79,28 +81,67 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
         allowComments: comments,
         ...markdownItConfig,
       });
-      /**
-       * Create config for Markdoc parser
-       * Then parse tokens to AST
-       */
+      const tokens = tokenizer.tokenize(content);
+
+      // --- Parse to AST ---
       const parserConfig: ParserArgs = {
         file: filename, // Debugging
         location: true, // Debugging
         slots: false, // TODO: Add support for slots?
       };
-      const ast = Markdoc.parse(tokenizer.tokenize(content), parserConfig);
-      /**
-       * Parse frontmatter if present
-       */
+      const ast = Markdoc.parse(tokens, parserConfig);
+
+      // --- Frontmatter ---
       const isFrontmatter = Boolean(ast.attributes.frontmatter);
       const frontmatter = isFrontmatter
         ? (YAML.parse(ast.attributes.frontmatter) as Record<string, unknown>)
         : {};
-      /**
-       * Load Markdoc schemas from directory
-       */
-      const { config: loadedConfig, dependencies } =
-        await loadSchemas(schemaPaths);
+
+      // --- Load Schemas & Partials
+      const dependencies: string[] = [];
+      let configFromSchemaDir: Config = {};
+      let partialsFromSchemaDir: Config["partials"] = {};
+      let partialsFromExplicitDir: Config["partials"] = {};
+
+      // Discover optional schema directory
+      const resolvedSchemaDir = findFirstExistingDirectory(schemaPaths);
+
+      // Load Schemas and Partials from the resolved directory
+      if (resolvedSchemaDir) {
+        const { config: loadedSchemaConfig, dependencies: schemaDeps } =
+          await loadSchemas(resolvedSchemaDir);
+        configFromSchemaDir = loadedSchemaConfig;
+        dependencies.push(...schemaDeps);
+
+        const { config: loadedPartialsConfig, dependencies: partialDeps } =
+          loadPartials(resolvedSchemaDir, extensions, false);
+        if (loadedPartialsConfig) partialsFromSchemaDir = loadedPartialsConfig;
+        dependencies.push(...partialDeps);
+      }
+
+      // Load Partials from the specified directory if provided
+      if (partialsPath) {
+        const { config: loadedPartialsConfig, dependencies: partialDeps } =
+          loadPartials(partialsPath, extensions, true);
+        if (loadedPartialsConfig)
+          partialsFromExplicitDir = loadedPartialsConfig;
+        dependencies.push(...partialDeps);
+      }
+
+      // --- Assemble the final config ---
+      const finalConfig: Config = {
+        // Start with base config loaded from the schema directory
+        nodes: { ...configFromSchemaDir.nodes },
+        tags: { ...configFromSchemaDir.tags },
+        functions: { ...configFromSchemaDir.functions },
+        variables: { ...configFromSchemaDir.variables },
+
+        // Merge partials: explicit path takes precedence over schema dir path
+        partials: {
+          ...partialsFromSchemaDir,
+          ...partialsFromExplicitDir, // Explicitly loaded partials override those from schema dir if names clash
+        },
+      };
 
       // const {
       //   partials: partialsDirectoryFromSchema,
@@ -131,10 +172,10 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
        * Check if Markdoc AST is valid
        * Separate errors into breaking and non-breaking and log them appropriately
        */
-      const errors = Markdoc.validate(ast, loadedConfig);
+      const errors = Markdoc.validate(ast, finalConfig);
       handleValidationErrors(errors, validationLevel, filename);
 
-      const transformedContent = await Markdoc.transform(ast, loadedConfig);
+      const transformedContent = Markdoc.transform(ast, finalConfig);
 
       const svelteContent = render(transformedContent);
       const frontmatterString = isFrontmatter
@@ -151,7 +192,7 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
 
       const componentsString = getComponentImports(
         // schemaWithoutPartials,
-        loadedConfig,
+        finalConfig,
         "/src/lib/components",
       );
       const layoutOpenString =
