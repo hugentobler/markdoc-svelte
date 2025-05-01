@@ -5,7 +5,9 @@ import type { Config } from "@markdoc/markdoc";
 
 import log from "./logs.ts";
 
-// Describes the structure of the configuration loaded by this function
+/**
+ * Describe a loaded Markdoc config with optional parts.
+ */
 interface LoadedConfig {
   nodes?: Config["nodes"];
   tags?: Config["tags"];
@@ -13,36 +15,30 @@ interface LoadedConfig {
   functions?: Config["functions"];
 }
 
-// Describes the overall return value of loadSchema
-interface LoadedSchemaResult {
-  config: LoadedConfig;
-  dependencies: string[]; // Preprocessor markup dependencies
-}
-
 /**
- * Asynchronously loads Markdoc configuration components (tags, functions, variables, nodes)
- * from predefined files (e.g., 'tags.ts', 'functions/index.js') within a given directory.
+ * Asynchronously loads Markdoc Nodes, Tags, Variables, and Functions
+ * from Schema folders and files (e.g., 'tags.ts', 'functions/index.js')
+ * from a specified directory.
  *
- * It dynamically imports modules from files like `tags.ts`, `tags.js`,
- * `tags/index.ts`, or `tags/index.js` (and similarly for `functions`, `nodes`, etc.).
- * Cache-busting is added to imports in development mode to aid HMR.
+ * Supports importing from files like `nodes.ts`, `nodes.js`, `nodes/index.ts`
+ * or `nodes/index.js` (and similarly for `tags`, `variables`, `functions`).
  *
- * @async
- * @param schemaDirectory The absolute, normalized path to the schema directory. If null, returns empty config.
- * @returns A Promise resolving to a `LoadedSchemaResult` object containing:
- *          - `config`: The assembled Markdoc configuration (`LoadedConfig`).
- *          - `dependencies`: An array of absolute file paths the configuration depends on.
+ * Cache-busting added in development mode for HMR.
+ *
+ * @param directory - The absolute, normalized path to the schema directory.
+ * @returns A Promise resolving to an object with two properties:
+ * - config: The loaded and assembled Markdoc config with optional parts.
+ * - deps: An array of absolute file paths as dependencies for Svelte preprocessor.
  */
 const loadSchemas = async (
-  schemaDirectory: string,
-): Promise<LoadedSchemaResult> => {
-  const schemaDependencies: string[] = [];
+  directory: string,
+): Promise<{
+  config: LoadedConfig;
+  deps: string[];
+}> => {
   const loadedConfigParts: Partial<LoadedConfig> = {};
-
-  // Helper to resolve paths within the found schema directory
-  // Expects schemaDirectory to be absolute and normalized already
-  const getPathInSchemaDirectory = (subPath: string) =>
-    Path.posix.join(schemaDirectory, subPath); // Use posix.join for consistency
+  const deps: string[] = [];
+  const dir = directory;
 
   /**
    * Reads the default export from JS/TS files for a specific config part
@@ -73,7 +69,7 @@ const loadSchemas = async (
     // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   ): Promise<unknown | null> {
     try {
-      const moduleBase = getPathInSchemaDirectory(configPartName);
+      const moduleBase = Path.posix.join(dir, configPartName);
       let moduleFile: string | null = null;
 
       const pathsToCheck = [
@@ -99,14 +95,13 @@ const loadSchemas = async (
       if (moduleFile) {
         let importPath = `file://${moduleFile}`;
         if (process.env.NODE_ENV === "development") {
-          importPath += `?t=${Date.now()}`;
+          importPath += `?t=${Date.now()}`; // Cache-busting for HMR
         }
 
         const importedModule = (await import(importPath)) as {
           default?: unknown;
         };
-        // Add the *actual file found* as a dependency
-        schemaDependencies.push(moduleFile);
+        deps.push(moduleFile); // Add the *actual file found* as a dependency
 
         return importedModule?.default || null;
       }
@@ -139,14 +134,14 @@ const loadSchemas = async (
     functions: loadedConfigParts.functions,
   };
 
-  log.debug(`Schema Dependencies: ${schemaDependencies.toString()}`);
-  log.debug(
-    `Loaded Schema Config (excluding partials): ${JSON.stringify(finalConfig)}`,
-  );
+  // log.debug(`Schema Dependencies: ${deps.toString()}`);
+  // log.debug(
+  //   `Loaded Schema Config: ${JSON.stringify(finalConfig)}`,
+  // );
 
   return {
     config: finalConfig,
-    dependencies: [...new Set(schemaDependencies)], // Ensure uniqueness
+    deps: [...new Set(deps)], // Ensure uniqueness
   };
 };
 

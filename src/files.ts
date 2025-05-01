@@ -15,9 +15,7 @@ export const normalizeAbsolutePath = (absolutePath: string): string => {
  * @param potentialPaths An array of relative or absolute paths to check.
  * @returns The absolute, normalized path of the first directory found, or null if none exist.
  */
-export const findFirstExistingDirectory = (
-  potentialPaths: string[],
-): string | null => {
+export const findFirstDirectory = (potentialPaths: string[]): string | null => {
   for (const relativeOrAbsolutePath of potentialPaths) {
     // Resolve the path to ensure it's absolute for existsSync check
     const potentialAbsolutePath = Path.resolve(relativeOrAbsolutePath);

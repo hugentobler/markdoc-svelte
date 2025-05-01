@@ -1,4 +1,4 @@
-import { markdoc } from "./main";
-import { escapeMarkdocBrackets, unescapeMarkdocBrackets } from "./utils";
+import { markdoc } from "./main.ts";
+import { escapeMarkdocBrackets, unescapeMarkdocBrackets } from "./utils.ts";
 
 export { escapeMarkdocBrackets, markdoc, unescapeMarkdocBrackets };

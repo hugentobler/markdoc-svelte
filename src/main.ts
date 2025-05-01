@@ -5,7 +5,7 @@ import type { PreprocessorGroup } from "svelte/compiler";
 import YAML from "yaml";
 
 import { handleValidationErrors } from "./errors.ts";
-import { findFirstExistingDirectory } from "./files.ts";
+import { findFirstDirectory } from "./files.ts";
 import { getComponentImports } from "./getComponents.ts";
 import log from "./logs.ts";
 import loadPartials from "./partials.ts";
@@ -15,7 +15,7 @@ import type { Options } from "./types";
 
 const validOptionKeys: (keyof Options)[] = [
   "extensions",
-  "comments",
+  "allowComments",
   "linkify",
   "typographer",
   "validationLevel",
@@ -42,7 +42,7 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
     options.extensions && options.extensions.length > 0
       ? options.extensions
       : [".mdoc", ".md"];
-  const comments = options.comments ?? false;
+  const allowComments = options.allowComments ?? true;
   const typographer = options.typographer ?? false;
   const linkify = options.linkify ?? false;
   const schemaPaths = options.schemaDirectory
@@ -78,7 +78,7 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       };
       const tokenizer = new Markdoc.Tokenizer({
         allowIndentation: true,
-        allowComments: comments,
+        allowComments: allowComments,
         ...markdownItConfig,
       });
       const tokens = tokenizer.tokenize(content);
@@ -91,56 +91,50 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       };
       const ast = Markdoc.parse(tokens, parserConfig);
 
-      // --- Frontmatter ---
+      // --- Parse Frontmatter ---
       const isFrontmatter = Boolean(ast.attributes.frontmatter);
-      const frontmatter = isFrontmatter
-        ? (YAML.parse(ast.attributes.frontmatter) as Record<string, unknown>)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const frontmatter: Record<string, unknown> = isFrontmatter
+        ? YAML.parse(ast.attributes.frontmatter as string)
         : {};
 
-      // --- Load Schemas & Partials
+      // --- Prepare to load Schemas & Partials ---
       const dependencies: string[] = [];
-      let configFromSchemaDir: Config = {};
-      let partialsFromSchemaDir: Config["partials"] = {};
-      let partialsFromExplicitDir: Config["partials"] = {};
+      let configFromSchema: Config = {};
+      let partialsFromSchema: Config["partials"] = {};
+      let partialsFromPartials: Config["partials"] = {};
 
-      // Discover optional schema directory
-      const resolvedSchemaDir = findFirstExistingDirectory(schemaPaths);
+      // --- Discover optional schema directory ---
+      const schemaDir = findFirstDirectory(schemaPaths);
 
-      // Load Schemas and Partials from the resolved directory
-      if (resolvedSchemaDir) {
-        const { config: loadedSchemaConfig, dependencies: schemaDeps } =
-          await loadSchemas(resolvedSchemaDir);
-        configFromSchemaDir = loadedSchemaConfig;
+      // --- Load Schemas and Partials from resolved schema directory ---
+      if (schemaDir) {
+        const { config, deps: schemaDeps } = await loadSchemas(schemaDir);
+        configFromSchema = config;
         dependencies.push(...schemaDeps);
 
-        const { config: loadedPartialsConfig, dependencies: partialDeps } =
-          loadPartials(resolvedSchemaDir, extensions, false);
-        if (loadedPartialsConfig) partialsFromSchemaDir = loadedPartialsConfig;
-        dependencies.push(...partialDeps);
+        const { config: partials, deps } = loadPartials(schemaDir, extensions);
+        if (partials) partialsFromSchema = partials;
+        dependencies.push(...deps);
       }
 
-      // Load Partials from the specified directory if provided
+      // --- Load Partials from specified partials directory ---
       if (partialsPath) {
-        const { config: loadedPartialsConfig, dependencies: partialDeps } =
-          loadPartials(partialsPath, extensions, true);
-        if (loadedPartialsConfig)
-          partialsFromExplicitDir = loadedPartialsConfig;
-        dependencies.push(...partialDeps);
+        const { config, deps } = loadPartials(partialsPath, extensions, true);
+        if (config) partialsFromPartials = config;
+        dependencies.push(...deps);
       }
 
-      // --- Assemble the final config ---
-      const finalConfig: Config = {
+      // --- Assemble full config ---
+      const fullConfig: Config = {
         // Start with base config loaded from the schema directory
-        nodes: { ...configFromSchemaDir.nodes },
-        tags: { ...configFromSchemaDir.tags },
-        functions: { ...configFromSchemaDir.functions },
-        variables: { ...configFromSchemaDir.variables },
-
-        // Merge partials: explicit path takes precedence over schema dir path
-        partials: {
-          ...partialsFromSchemaDir,
-          ...partialsFromExplicitDir, // Explicitly loaded partials override those from schema dir if names clash
-        },
+        nodes: { ...configFromSchema.nodes },
+        tags: { ...configFromSchema.tags },
+        functions: { ...configFromSchema.functions },
+        // Make $frontmatter available as variable
+        variables: { ...configFromSchema.variables, frontmatter },
+        // Merge partials: explicitly set partials overwrrite auto-loaded ones
+        partials: { ...partialsFromSchema, ...partialsFromPartials },
       };
 
       // const {
@@ -168,14 +162,13 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       //       : undefined,
       // };
 
-      /**
-       * Check if Markdoc AST is valid
-       * Separate errors into breaking and non-breaking and log them appropriately
-       */
-      const errors = Markdoc.validate(ast, finalConfig);
+      // --- Validate Markdoc AST ---
+      const errors = Markdoc.validate(ast, fullConfig);
       handleValidationErrors(errors, validationLevel, filename);
 
-      const transformedContent = Markdoc.transform(ast, finalConfig);
+      // --- Tranform AST with loaded config ---
+      const transformedContent = Markdoc.transform(ast, fullConfig);
+      console.log(JSON.stringify(transformedContent));
 
       const svelteContent = render(transformedContent);
       const frontmatterString = isFrontmatter
@@ -192,7 +185,7 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
 
       const componentsString = getComponentImports(
         // schemaWithoutPartials,
-        finalConfig,
+        fullConfig,
         "/src/lib/components",
       );
       const layoutOpenString =

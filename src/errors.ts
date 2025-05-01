@@ -1,6 +1,6 @@
 import type { ValidateError } from "@markdoc/markdoc";
 
-import log from "./logs";
+import log from "./logs.ts";
 import type { ValidationLevel } from "./types";
 
 /**

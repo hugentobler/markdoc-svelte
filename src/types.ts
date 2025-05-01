@@ -1,5 +1,8 @@
 import type { Config } from "@markdoc/markdoc";
 
+/**
+ * The validation levels for the preprocessor.
+ */
 export type ValidationLevel =
   | "debug"
   | "info"
@@ -9,22 +12,42 @@ export type ValidationLevel =
 
 /**
  * Configuration options for the Markdoc preprocessor
- * @interface Options
  */
 export interface Options {
-  /** File extensions to preprocess (default: [".mdoc", ".md"]) */
+  /**
+   * File extensions to preprocess.
+   * @default [".mdoc", ".md"]
+   */
   extensions?: string[];
-  /** Enable markdown parser comments (default: false) */
-  comments?: boolean;
-  /** Enable markdown parser to autoconvert URL-like text to links (default: false) */
+  /**
+   * Enable adding Markdown comments to your documents.
+   * @default true
+   */
+  allowComments?: boolean;
+  /**
+   * Enable autoconvert URL-like text to links.
+   * @default false
+   */
   linkify?: boolean;
-  /** Enable markdown parser language-neutral replacement + quotes beautification (default: false) */
+  /**
+   * Enable some language-neutral replacement + quotes beautification.
+   * @default false
+   */
   typographer?: boolean;
-  /** Sets the validation level the preprocessor will throw an error and stop the build (default: "error") */
+  /**
+   * Sets the level invalid parsing will throw a preprocess error.
+   * @default "error"
+   */
   validationLevel?: ValidationLevel;
-  /** Customize the Markdoc Schemas directory path (relative path to Svelte config) */
+  /**
+   * Specify a relative directory path to import folders or files to use as Markdoc Schemas.
+   * @default ["./markdoc", "./src/markdoc"]
+   */
   schemaDirectory?: string;
-  /** Specify a directory to import files (with .extensions) to use as Markdoc Partials (relative path to Svelte config) */
+  /**
+   * Specify a relative directory path to import files (with extensions) to use as Markdoc Partials.
+   * @default undefined
+   */
   partialsDirectory?: string;
 
   layout?: string;
