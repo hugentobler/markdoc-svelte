@@ -168,7 +168,6 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
 
       // --- Tranform AST with loaded config ---
       const transformedContent = Markdoc.transform(ast, fullConfig);
-      console.log(JSON.stringify(transformedContent));
 
       const svelteContent = render(transformedContent);
       const frontmatterString = isFrontmatter

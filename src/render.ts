@@ -53,7 +53,7 @@ const escapeChildrenToString = (
 };
 
 /**
- * Renders a Markdoc node into an HTML string.
+ * Renders a Markdoc node tree into an HTML string.
  */
 const render = (node: RenderableTreeNodes): string => {
   // Early return for strings.
