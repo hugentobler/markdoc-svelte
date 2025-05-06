@@ -1,6 +1,5 @@
 import Markdoc from "@markdoc/markdoc";
 import type { Config, ParserArgs } from "@markdoc/markdoc";
-import MarkdownIt from "markdown-it";
 import type { PreprocessorGroup } from "svelte/compiler";
 import YAML from "yaml";
 
@@ -72,7 +71,8 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
         return;
 
       // --- Tokenization ---
-      const markdownItConfig: MarkdownIt.Options = {
+      // Markdown-It options https://github.com/markdown-it/markdown-it?tab=readme-ov-file#init-with-presets-and-options
+      const markdownItConfig = {
         linkify,
         typographer,
       };

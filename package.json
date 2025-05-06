@@ -27,7 +27,6 @@
   "license": "MIT",
   "dependencies": {
     "@markdoc/markdoc": "^0.5.1",
-    "markdown-it": "^14.1.0",
     "yaml": "^2.7.1"
   },
   "devDependencies": {
@@ -37,7 +36,6 @@
     "@testing-library/svelte": "^5.2.6",
     "@tsconfig/svelte": "^5.0.4",
     "@types/jest": "^29.5.14",
-    "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.15.2",
     "eslint": "^9.25.1",
     "eslint-config-prettier": "^10.1.2",
