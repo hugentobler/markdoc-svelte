@@ -354,6 +354,8 @@ markdoc
 By default, the preprocessor looks for your Markdoc schema definition in a `./markdoc` directory at the app root.
 To use a different path, define the directory in the options as a relative path.
 
+Both `/markdoc` and `./markdoc` formats are supported (both are treated as relative to the project root).
+
 ```javascript
 import { markdoc } from "markdoc-svelte";
 
@@ -362,6 +364,7 @@ const config = {
   preprocess: [
     markdoc({
       schema: "./path/to/schema/directory",
+      // or schema: "/path/to/schema/directory", // both work the same
     }),
   ],
 };

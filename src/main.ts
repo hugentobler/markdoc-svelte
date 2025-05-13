@@ -3,9 +3,9 @@ import type { Config, ParserArgs } from "@markdoc/markdoc";
 import type { PreprocessorGroup } from "svelte/compiler";
 import YAML from "yaml";
 
+import { getComponentImports } from "./components.ts";
 import { handleValidationErrors } from "./errors.ts";
-import { findFirstDirectory } from "./files.ts";
-import { getComponentImports } from "./getComponents.ts";
+import { findFirstDirectory, makePathProjectRelative } from "./files.ts";
 import log from "./logs.ts";
 import loadPartials from "./partials.ts";
 import render from "./render.ts";
@@ -20,6 +20,7 @@ const validOptionKeys: (keyof Options)[] = [
   "validationLevel",
   "schemaDirectory",
   "partialsDirectory",
+  "componentsDirectory",
 ];
 
 /**
@@ -45,9 +46,12 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
   const typographer = options.typographer ?? false;
   const linkify = options.linkify ?? false;
   const schemaPaths = options.schemaDirectory
-    ? [options.schemaDirectory]
+    ? [makePathProjectRelative(options.schemaDirectory)]
     : ["./markdoc", "./src/markdoc"];
-  const partialsPath = options.partialsDirectory;
+  const partialsPath = options.partialsDirectory
+    ? makePathProjectRelative(options.partialsDirectory)
+    : undefined;
+  const componentsPath = options.componentsDirectory || "$lib/components";
 
   const layoutPath = options.layout;
 
@@ -169,24 +173,23 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       // --- Tranform AST with loaded config ---
       const transformedContent = Markdoc.transform(ast, fullConfig);
 
+      // --- Render Markdoc AST to Svelte ---
       const svelteContent = render(transformedContent);
-      const frontmatterString = isFrontmatter
-        ? `<script context="module">\n` +
-          `\texport const metadata = ${JSON.stringify(frontmatter)};\n` +
-          `\tconst { ${Object.keys(frontmatter).join(", ")} } = metadata;\n` +
-          "</script>\n"
-        : "";
 
-      // TODO
-      // - getComponentImports looks through the imported TAGS and gathers all the needed Svelte components. Following a rigid path, and namving convention.
-      // - I want to introduce another option that can render the components also for Nodes with a custom attribute set to say "tag: <component-name>". Doing so would involve including a "Render" option to the config. which probably means I need to either add a Render string, or somehow move the schema from Node to Tag?
-      // - I MAY NOT NEED TO USE TAGS AFTER ALL. Nodes can be set render strings too. In that case, maybe I can access the name of the component I want from an attribute, then pass it to Render. Then let the getcomponents function handle the rest by modifying it to look at Tags too.
+      // --- Define frontmatter string for Svelte ---
+      // Declare module context, destructure frontmatter object
+      const scriptModuleTag = isFrontmatter
+        ? `<script module>\n` +
+          `\texport const frontmatter = ${JSON.stringify(frontmatter)};\n` +
+          `\tconst { ${Object.keys(frontmatter).join(", ")} } = frontmatter;\n` +
+          `</script>\n`
+        : ``;
 
-      const componentsString = getComponentImports(
-        // schemaWithoutPartials,
-        fullConfig,
-        "/src/lib/components",
-      );
+      // --- Generate component import statements ---
+      const componentsString = getComponentImports(fullConfig, componentsPath);
+
+      const scriptTag = `<script>\n` + `${componentsString}` + `</script>\n`;
+
       const layoutOpenString =
         layoutPath || componentsString
           ? `
@@ -204,11 +207,13 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       const layoutCloseString = layoutPath ? "</Layout_DEFAULT>\n" : "";
 
       const code =
-        frontmatterString +
-        layoutOpenString +
-        svelteContent +
-        layoutCloseString;
+        scriptModuleTag +
+        scriptTag +
+        // layoutOpenString +
+        svelteContent;
+      // layoutCloseString;
 
+      console.log(code);
       // TODO: data is not a valid return value for processorgroup
       // We already embed frontmatter as metadata in code
       return {

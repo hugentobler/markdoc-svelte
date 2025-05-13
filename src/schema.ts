@@ -23,6 +23,8 @@ interface LoadedConfig {
  * Supports importing from files like `nodes.ts`, `nodes.js`, `nodes/index.ts`
  * or `nodes/index.js` (and similarly for `tags`, `variables`, `functions`).
  *
+ * Supports both "/markdoc" and "./markdoc" formats (both treated as relative to project root).
+ *
  * Cache-busting added in development mode for HMR.
  *
  * @param directory - The absolute, normalized path to the schema directory.
@@ -38,6 +40,7 @@ const loadSchemas = async (
 }> => {
   const loadedConfigParts: Partial<LoadedConfig> = {};
   const deps: string[] = [];
+  // Handle paths that start with "/" by treating them as relative to the project root
   const dir = directory;
 
   /**
@@ -102,7 +105,6 @@ const loadSchemas = async (
           default?: unknown;
         };
         deps.push(moduleFile); // Add the *actual file found* as a dependency
-
         return importedModule?.default || null;
       }
       return null;

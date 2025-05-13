@@ -1,4 +1,5 @@
 import type { Config } from "@markdoc/markdoc";
+import type { Component } from "svelte";
 
 /**
  * The validation levels for the preprocessor.
@@ -40,19 +41,42 @@ export interface Options {
    */
   validationLevel?: ValidationLevel;
   /**
-   * Specify a relative directory path to import folders or files to use as Markdoc Schemas.
+   * Specify a directory to import folders or files to use as Markdoc Schemas.
+   * Path is relative to Svelte project root.
    * @default ["./markdoc", "./src/markdoc"]
    */
   schemaDirectory?: string;
   /**
-   * Specify a relative directory path to import files (with extensions) to use as Markdoc Partials.
+   * Specify a directory to import files with 'extensions' as Markdoc Partials.
+   * Default is to load partials from 'schemaDirectory'.
+   * Path is relative to Svelte project root.
    * @default undefined
    */
   partialsDirectory?: string;
+  /**
+   * Specify a directory to import Svelte components to customize Markdoc Nodes and Tags.
+   * Use import paths and aliases that Svelte can resolve.
+   * @default "$lib/components"
+   */
+  componentsDirectory?: string;
 
   layout?: string;
   functions?: Config["functions"];
   nodes?: Config["nodes"];
   tags?: Config["tags"];
   variables?: Config["variables"];
+}
+
+/**
+ * Represents the structure of an imported Markdoc module.
+ */
+export interface MarkdocModule {
+  /**
+   * The default Svelte component exported by the Markdoc file.
+   */
+  default: Component;
+  /**
+   * Optional frontmatter extracted from the Markdoc file.
+   */
+  frontmatter?: { [key: string]: string };
 }

@@ -1,3 +1,2 @@
-import { markdoc } from "./main.ts";
-
-export { markdoc };
+export { markdoc } from "./main.ts";
+export type { MarkdocModule } from "./types.ts";

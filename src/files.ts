@@ -3,6 +3,19 @@ import Path from "path";
 
 import log from "./logs.ts";
 
+/**
+ * Converts a path starting with "/" to a project-relative path starting with "./".
+ *
+ * @param path The path that might start with "/"
+ * @returns The path converted to be project-relative if it started with "/"
+ */
+export const makePathProjectRelative = (path: string): string => {
+  if (path.startsWith("/")) {
+    return "." + path; // Convert "/markdoc" to "./markdoc"
+  }
+  return path;
+};
+
 // Helper to normalize path separators to POSIX style (forward slashes)
 export const normalizeAbsolutePath = (absolutePath: string): string => {
   // Ensure the input is treated as absolute before normalizing
@@ -16,7 +29,9 @@ export const normalizeAbsolutePath = (absolutePath: string): string => {
  * @returns The absolute, normalized path of the first directory found, or null if none exist.
  */
 export const findFirstDirectory = (potentialPaths: string[]): string | null => {
-  for (const relativeOrAbsolutePath of potentialPaths) {
+  for (let relativeOrAbsolutePath of potentialPaths) {
+    relativeOrAbsolutePath = makePathProjectRelative(relativeOrAbsolutePath);
+
     // Resolve the path to ensure it's absolute for existsSync check
     const potentialAbsolutePath = Path.resolve(relativeOrAbsolutePath);
     if (FS.existsSync(potentialAbsolutePath)) {
