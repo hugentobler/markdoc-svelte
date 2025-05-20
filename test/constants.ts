@@ -207,3 +207,28 @@ export const markdocBuiltInTags = `
   * baz
   {% /table %}
 `;
+
+export const noFrontmatter = `# Regular Markdown Content`;
+
+export const withFrontmatter = `
+---
+title: Test Title
+author: Test Author
+tags: [test, markdoc]
+---
+# Content with Frontmatter
+`;
+
+export const noComponents = `# Regular Content`;
+
+export const multipleComponents = `
+{% custom-component title="Welcome" description="This is a test component" %}
+This is the content inside the custom component.
+It can contain **markdown** and other elements.
+{% /custom-component %}
+
+{% another-component status="active" count=5 %}
+This is content inside another component.
+It shows the status and count values.
+{% /another-component %}
+`;
