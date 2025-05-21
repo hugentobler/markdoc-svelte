@@ -59,8 +59,13 @@ export interface Options {
    * @default "$lib/components"
    */
   componentsDirectory?: string;
-
+  /**
+   * Specify a Svelte component to use as a layout for the Markdoc file.
+   * Use import paths and aliases that Svelte can resolve.
+   * @default undefined
+   */
   layout?: string;
+  
   functions?: Config["functions"];
   nodes?: Config["nodes"];
   tags?: Config["tags"];

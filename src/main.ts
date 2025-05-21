@@ -3,7 +3,7 @@ import type { Config, ParserArgs } from "@markdoc/markdoc";
 import type { PreprocessorGroup } from "svelte/compiler";
 import YAML from "yaml";
 
-import { getComponentImports } from "./components.ts";
+import { getComponentImports, extractUsedSvelteComponents } from "./components.ts";
 import { handleValidationErrors } from "./errors.ts";
 import { findFirstDirectory, makePathProjectRelative } from "./files.ts";
 import log from "./logs.ts";
@@ -52,17 +52,15 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
     ? makePathProjectRelative(options.partialsDirectory)
     : undefined;
   const componentsPath = options.componentsDirectory || "$lib/components";
-
   const layoutPath = options.layout;
-
   const validationLevel = options.validationLevel || "error";
-  const {
-    functions,
-    nodes,
-    partials: partialsDirectory,
-    tags,
-    variables,
-  } = options;
+  // const {
+  //   functions,
+  //   nodes,
+  //   partials: partialsDirectory,
+  //   tags,
+  //   variables,
+  // } = options;
 
   return {
     name: "markdoc-svelte",
@@ -186,39 +184,38 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
         : ``;
 
       // --- Generate component import statements ---
-      const componentsString = getComponentImports(fullConfig, componentsPath);
+      const usedSvelteComponentNames = extractUsedSvelteComponents(transformedContent);
+      const componentImportStatements = getComponentImports(usedSvelteComponentNames, componentsPath);
 
-      const scriptTag = `<script>\n` + `${componentsString}` + `</script>\n`;
+      // --- Construct script tag content ---
+      let allScriptImports = componentImportStatements;
+      if (layoutPath) {
+        // Add a newline before the layout import if there are already component imports
+        if (allScriptImports && allScriptImports.trim() !== "") {
+          allScriptImports += "\n";
+        }
+        allScriptImports += `\timport Layout_MARKDOC from '${layoutPath}';\n`;
+      }
 
-      const layoutOpenString =
-        layoutPath || componentsString
-          ? `
-          <script>
-            ${layoutPath ? `import Layout_DEFAULT from '${layoutPath}';` : ""}
-            ${componentsString}
-          </script>
-          ${
-            layoutPath
-              ? `<Layout_DEFAULT${isFrontmatter ? ` {...metadata}` : ""}>\n`
-              : ""
-          }`
-          : "";
+      const scriptTag = allScriptImports ? `<script>\n${allScriptImports}</script>\n` : "";
 
-      const layoutCloseString = layoutPath ? "</Layout_DEFAULT>\n" : "";
+      // --- Define layout wrapper strings ---
+      // Pass frontmatter to the layout component if it exists
+      const layoutWrapperOpen = layoutPath
+        ? `<Layout_MARKDOC${isFrontmatter ? ` {...frontmatter}` : ""}>\n`
+        : "";
+      const layoutWrapperClose = layoutPath ? `\n</Layout_MARKDOC>` : "";
 
+      // --- Assemble final Svelte code ---
       const code =
         scriptModuleTag +
         scriptTag +
-        // layoutOpenString +
-        svelteContent;
-      // layoutCloseString;
+        layoutWrapperOpen +
+        svelteContent +
+        layoutWrapperClose;
 
-      console.log(code);
-      // TODO: data is not a valid return value for processorgroup
-      // We already embed frontmatter as metadata in code
       return {
         code: code,
-        // data: frontmatter,
         dependencies,
       };
     },

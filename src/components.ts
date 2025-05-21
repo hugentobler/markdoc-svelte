@@ -1,51 +1,70 @@
-import type { Config, Schema } from "@markdoc/markdoc";
+import type { RenderableTreeNode } from "@markdoc/markdoc";
 
 /**
- * Generates Svelte import statements for components found in a Markdoc schema.
+ * Traverses the Markdoc RenderableTreeNode AST to find all Svelte component names
+ * that are actively used. It identifies components by their name starting with an
+ * uppercase letter, as per convention, assuming Markdoc.transform has already
+ * resolved these names from the schema's 'render' attributes.
  *
- * @param schema - The Markdoc configuration object containing tags and nodes.
+ * @param node - The RenderableTreeNode to traverse.
+ * @returns A Set of unique Svelte component names used in the tree.
+ */
+export const extractUsedSvelteComponents = (
+  node: RenderableTreeNode | null | undefined,
+): Set<string> => {
+  const usedComponents = new Set<string>();
+
+  function traverse(currentNode: RenderableTreeNode | null | undefined) {
+    if (!currentNode || typeof currentNode === 'string' || typeof currentNode === 'number' || typeof currentNode === 'boolean') {
+      return;
+    }
+
+    if (Array.isArray(currentNode)) {
+      for (const child of currentNode) {
+        traverse(child);
+      }
+      return;
+    }
+
+    // Check if this RenderableTreeNode object itself represents a Svelte component.
+    // 'currentNode.name' here is the name of the component/tag to be rendered.
+    if (currentNode.name && typeof currentNode.name === 'string' && /\p{Lu}/u.test(currentNode.name)) {
+      // Convention: if node.name starts with an uppercase letter, it's a Svelte component.
+      usedComponents.add(currentNode.name);
+    }
+
+    // Recursively process children
+    if (currentNode.children && Array.isArray(currentNode.children)) {
+      for (const child of currentNode.children) {
+        traverse(child as RenderableTreeNode | null | undefined);
+      }
+    }
+  }
+
+  traverse(node);
+  return usedComponents;
+};
+
+/**
+ * Generates Svelte import statements for a given set of Svelte component names.
+ *
+ * @param usedSvelteComponentNames - A Set of Svelte component names that need import statements.
  * @param componentDirPath - The directory path where Svelte components are located.
- *                           This can be any path format that Svelte/SvelteKit supports:
- *                           - Framework alias (e.g., "$lib/components")
- *                           - Absolute path (e.g., "/src/components")
- *                           - Relative path (e.g., "./components")
+ *                           This can be any path format that Svelte/SvelteKit supports.
  * @returns A string containing all generated Svelte import statements.
  */
 export const getComponentImports = (
-  schema: Config,
+  usedSvelteComponentNames: Set<string>,
   componentDirPath: string,
 ): string => {
   let importStatements = "";
+  for (const componentName of usedSvelteComponentNames) {
+    // We'll use POSIX style paths (forward slashes) for consistency
+    const componentPath =
+      `${componentDirPath}/${componentName}.svelte`.replace(/\/\//g, "/");
 
-  const addImportsForSchemaItems = (
-    schemaItems: Config["tags"] | Config["nodes"] | undefined,
-  ) => {
-    if (!schemaItems) return;
-
-    const itemsRecord = schemaItems as Record<
-      string,
-      Schema | string | undefined
-    >;
-
-    for (const name in itemsRecord) {
-      const item = itemsRecord[name];
-      if (!item || typeof item === "string") continue;
-
-      const renderName = (item as { render?: unknown }).render;
-      if (typeof renderName === "string" && /^\p{Lu}/u.test(renderName)) {
-        // Create component path using the provided directory path
-        // We'll use POSIX style paths (forward slashes) for consistency
-        const componentPath =
-          `${componentDirPath}/${renderName}.svelte`.replace(/\/\//g, "/");
-
-        // Generate the import statement
-        importStatements += `\timport ${renderName} from '${componentPath}';\n`;
-      }
-    }
-  };
-
-  addImportsForSchemaItems(schema.tags);
-  addImportsForSchemaItems(schema.nodes);
-
+    // Generate the import statement
+    importStatements += `\timport ${componentName} from '${componentPath}';\n`;
+  }
   return importStatements;
 };

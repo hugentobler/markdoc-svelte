@@ -1,5 +1,5 @@
 import { markdoc } from "../src/main.ts";
-import { noFrontmatter, withFrontmatter, noComponents, multipleComponents } from "./constants.ts";
+import { noFrontmatter, withFrontmatter, noComponents, multipleComponents, withLayoutAndFrontmatter } from "./constants.ts";
 import { describe, it, expect } from "vitest";
 import { customComponent } from "./markdoc/tags/custom-component";
 import { anotherComponent } from "./markdoc/tags/another-component";
@@ -31,6 +31,13 @@ describe("Frontmatter and Component Generation", () => {
   it("Multiple components with props", async () => {
     expect(
       await markdoc(testOptions).markup!({ content: multipleComponents, filename: "test.md" })
+    ).toMatchSnapshot();
+  });
+
+  it("With layout and frontmatter", async () => {
+    const layoutOptions = { ...testOptions, layout: "$lib/SimpleLayout.svelte" };
+    expect(
+      await markdoc(layoutOptions).markup!({ content: withLayoutAndFrontmatter, filename: "test.md" })
     ).toMatchSnapshot();
   });
 }); 

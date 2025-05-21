@@ -232,3 +232,12 @@ This is content inside another component.
 It shows the status and count values.
 {% /another-component %}
 `;
+
+export const withLayoutAndFrontmatter = `
+---
+title: Layout Test
+description: Testing layout with frontmatter
+---
+# Page with a Layout
+This content should be wrapped by a layout.
+`;

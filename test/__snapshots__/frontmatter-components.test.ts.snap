@@ -15,11 +15,7 @@ exports[`Frontmatter and Component Generation > Multiple components with props 1
 
 exports[`Frontmatter and Component Generation > No components 1`] = `
 {
-  "code": "<script>
-	import CustomComponent from './test/components/CustomComponent.svelte';
-	import AnotherComponent from './test/components/AnotherComponent.svelte';
-</script>
-<article><h1>Regular Content</h1></article>",
+  "code": "<article><h1>Regular Content</h1></article>",
   "dependencies": [
     "/Users/christopher/Documents/markdoc-svelte/test/markdoc/tags/index.ts",
   ],
@@ -28,11 +24,7 @@ exports[`Frontmatter and Component Generation > No components 1`] = `
 
 exports[`Frontmatter and Component Generation > No frontmatter 1`] = `
 {
-  "code": "<script>
-	import CustomComponent from './test/components/CustomComponent.svelte';
-	import AnotherComponent from './test/components/AnotherComponent.svelte';
-</script>
-<article><h1>Regular Markdown Content</h1></article>",
+  "code": "<article><h1>Regular Markdown Content</h1></article>",
   "dependencies": [
     "/Users/christopher/Documents/markdoc-svelte/test/markdoc/tags/index.ts",
   ],
@@ -41,11 +33,21 @@ exports[`Frontmatter and Component Generation > No frontmatter 1`] = `
 
 exports[`Frontmatter and Component Generation > With frontmatter 1`] = `
 {
+  "code": "<article><hr /><p>title: Test Title author: Test Author tags: [test, markdoc]</p><hr /><h1>Content with Frontmatter</h1></article>",
+  "dependencies": [
+    "/Users/christopher/Documents/markdoc-svelte/test/markdoc/tags/index.ts",
+  ],
+}
+`;
+
+exports[`Frontmatter and Component Generation > With layout and frontmatter 1`] = `
+{
   "code": "<script>
-	import CustomComponent from './test/components/CustomComponent.svelte';
-	import AnotherComponent from './test/components/AnotherComponent.svelte';
+	import Layout_MARKDOC from '$lib/SimpleLayout.svelte';
 </script>
-<article><hr /><p>title: Test Title author: Test Author tags: [test, markdoc]</p><hr /><h1>Content with Frontmatter</h1></article>",
+<Layout_MARKDOC>
+<article><hr /><p>title: Layout Test description: Testing layout with frontmatter</p><hr /><h1>Page with a Layout</h1><p>This content should be wrapped by a layout.</p></article>
+</Layout_MARKDOC>",
   "dependencies": [
     "/Users/christopher/Documents/markdoc-svelte/test/markdoc/tags/index.ts",
   ],
