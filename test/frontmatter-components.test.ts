@@ -1,13 +1,11 @@
 import { markdoc } from "../src/main.ts";
 import { noFrontmatter, withFrontmatter, noComponents, multipleComponents, withLayoutAndFrontmatter } from "./constants.ts";
 import { describe, it, expect } from "vitest";
-import { customComponent } from "./markdoc/tags/custom-component";
-import { anotherComponent } from "./markdoc/tags/another-component";
 
 describe("Frontmatter and Component Generation", () => {
   const testOptions = {
-    schemaDirectory: "./test/markdoc",
-    componentsDirectory: "./test/components"
+    schema: "./test/markdoc",
+    components: "./test/components"
   };
 
   it("No frontmatter", async () => {

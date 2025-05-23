@@ -14,13 +14,18 @@ import type { Options } from "./types";
 
 const validOptionKeys: (keyof Options)[] = [
   "extensions",
-  "allowComments",
+  "schema",
+  "nodes",
+  "tags",
+  "variables",
+  "functions",
+  "partials",
+  "components",
+  "layout",
+  "comments",
   "linkify",
   "typographer",
   "validationLevel",
-  "schemaDirectory",
-  "partialsDirectory",
-  "componentsDirectory",
 ];
 
 /**
@@ -38,29 +43,27 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
     }
   }
 
+  // --- Set defaults ---
   const extensions =
     options.extensions && options.extensions.length > 0
       ? options.extensions
       : [".mdoc", ".md"];
-  const allowComments = options.allowComments ?? true;
-  const typographer = options.typographer ?? false;
-  const linkify = options.linkify ?? false;
-  const schemaPaths = options.schemaDirectory
-    ? [makePathProjectRelative(options.schemaDirectory)]
+  const schemaPaths = options.schema
+    ? [makePathProjectRelative(options.schema)]
     : ["./markdoc", "./src/markdoc"];
-  const partialsPath = options.partialsDirectory
-    ? makePathProjectRelative(options.partialsDirectory)
+  const nodes = options.nodes;
+  const tags = options.tags;
+  const variables = options.variables;
+  const functions = options.functions;
+  const partialsPath = options.partials
+    ? makePathProjectRelative(options.partials)
     : undefined;
-  const componentsPath = options.componentsDirectory || "$lib/components";
+  const componentsPath = options.components || "$lib/components";
   const layoutPath = options.layout;
+  const allowComments = options.comments ?? true;
+  const linkify = options.linkify ?? false;
+  const typographer = options.typographer ?? false;
   const validationLevel = options.validationLevel || "error";
-  // const {
-  //   functions,
-  //   nodes,
-  //   partials: partialsDirectory,
-  //   tags,
-  //   variables,
-  // } = options;
 
   return {
     name: "markdoc-svelte",
@@ -130,39 +133,15 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       // --- Assemble full config ---
       const fullConfig: Config = {
         // Start with base config loaded from the schema directory
-        nodes: { ...configFromSchema.nodes },
-        tags: { ...configFromSchema.tags },
-        functions: { ...configFromSchema.functions },
+        // Merge in config passed as options
+        nodes: { ...configFromSchema.nodes, ...nodes },
+        tags: { ...configFromSchema.tags, ...tags },
+        functions: { ...configFromSchema.functions, ...functions },
         // Make $frontmatter available as variable
-        variables: { ...configFromSchema.variables, frontmatter },
+        variables: { ...configFromSchema.variables, ...variables, frontmatter },
         // Merge partials: explicitly set partials overwrrite auto-loaded ones
         partials: { ...partialsFromSchema, ...partialsFromPartials },
       };
-
-      // const {
-      //   partials: partialsDirectoryFromSchema,
-      //   variables: variablesFromSchema,
-      //   ...schemaFromPathWithoutPartials
-      // } = schemaFromPath;
-
-      // Include schema parts passed as options
-      // But ignore if undefined
-      // Leave out partials until directory processed
-      // const schemaWithoutPartials = {
-      //   ...schemaFromPathWithoutPartials,
-      //   ...(functions && { functions }),
-      //   ...(nodes && { nodes }),
-      //   ...(tags && { tags }),
-      // };
-
-      // const markdocConfig = {
-      //   ...schemaWithoutPartials,
-      //   variables: { frontmatter, ...(variables || variablesFromSchema) },
-      //   partials:
-      //     partialsDirectory || schemaFromPath["partials"]
-      //       ? getPartials(partialsDirectory || schemaFromPath["partials"])
-      //       : undefined,
-      // };
 
       // --- Validate Markdoc AST ---
       const errors = Markdoc.validate(ast, fullConfig);
@@ -190,7 +169,6 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       // --- Construct script tag content ---
       let allScriptImports = componentImportStatements;
       if (layoutPath) {
-        // Add a newline before the layout import if there are already component imports
         if (allScriptImports && allScriptImports.trim() !== "") {
           allScriptImports += "\n";
         }

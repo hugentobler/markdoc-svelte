@@ -209,152 +209,63 @@ description: Integrate Markdoc into your Next.js app
 
 You can choose to customize how Markdoc files are processed.
 
-| Option            | Type             | Default           | Description                           |
-| ----------------- | ---------------- | ----------------- | ------------------------------------- |
-| `comments`        | boolean          | `true`            | [Comments](#comments)                 |
-| `extensions`      | array of strings | `[".mdoc",".md"]` | [Extensions](#extensions)             |
-| `functions`       | functions object |                   | [Functions](#functions)               |
-| `layout`          | path             |                   | [Layout](#layout)                     |
-| `nodes`           | nodes object     |                   | [Nodes](#nodes)                       |
-| `partials`        | partials object  |                   | [Partials](#partials)                 |
-| `schema`          | path             |                   | [Schema path](#schema-path)           |
-| `tags`            | tags object      |                   | [Tags](#tags)                         |
-| `typographer`     | boolean          | `false`           | [Typographer](#typographer)           |
-| `validationLevel` | string           | `info`            | [Validation level](#validation-level) |
-| `variables`       | variables object |                   | [Variables](#variables)               |
+| Option            | Type             | Default                           | Description                                     |
+| ----------------- | ---------------- | --------------------------------- | ----------------------------------------------- |
+| `extensions`      | string[]         | `[".mdoc", ".md"]`               | [File extensions to preprocess](#extensions)                  |
+| `schema`          | string           | `["./markdoc", "./src/markdoc"]` | [Markdoc schema directory](#schema)                     |
+| `nodes`           | object           |                                  | [Markdoc nodes](#nodes)                        |
+| `tags`            | object           |                                  | [Markdoc tags](#tags)                          |
+| `variables`       | object           |                                  | [Markdoc variables](#variables)                |
+| `functions`       | object           |                                  | [Markdoc functions](#functions)                |
+| `partials`        | string           |                                  | [Markdoc partials directory](#partials)                |
+| `components`      | string           | `"$lib/components"`              | [Svelte components directory](#components)            |
+| `layout`          | string           |                                  | [Svelte layout component](#layout)                    |
+| `comments`        | boolean          | `true`                           | [Allow Markdown comments](#comments)                   |
+| `linkify`         | boolean          | `false`                          | [Auto-convert URLs to links](#linkify)         |
+| `typographer`     | boolean          | `false`                          | [Typography replacements](#typographer)        | 
+| `validationLevel` | string           | `"error"`                        | [Validation level of preprocessor](#validation-level)          |
 
-### Comments
+### Extensions
 
-Whether to allow [Markdown comment syntax](https://spec.commonmark.org/0.30/#example-624)
-to hide comments from the rendered output.
-On by default as this will be the default in Markdoc.
-
-To turn this off, set the option to `false`:
+By default files ending in `.mdoc` and `.md` are preprocessed. Remember to include all Markdoc extensions in the Svelte Kit config `extensions` array.
 
 ```javascript
 import { markdoc } from "markdoc-svelte";
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-  extensions: [".mdoc", ".md"],
+  extensions: [".svelte", ".mdoc", ".md"],
   preprocess: [
     markdoc({
-      comments: false,
+      extensions: [".mdoc", ".md"],
     }),
   ],
 };
 ```
 
-### Validation level
+### Schema
 
-This preprocessor validates whether the Markdoc is valid.
-By default, it throws an error on files for errors at the `error` or `critical` level.
-To debug, you can set the level to a lower level and it stops the build for any errors at that level or above.
-Possible values in ascending order: `debug`, `info`, `warning`, `error`, `critical`
+By default, the preprocessor looks for your Markdoc schema definition in `./markdoc` or `./src/markdoc` directories. 
 
-```javascript
-import { markdoc } from "markdoc-svelte";
-
-/** @type {import('@sveltejs/kit').Config} */
-const config = {
-  extensions: [".mdoc", ".md"],
-  preprocess: [
-    markdoc({
-      validationLevel: "info",
-    }),
-  ],
-};
-```
-
-### Typographer
-
-Choose whether to turn on typographic replacements from [markdown-it](https://github.com/markdown-it/markdown-it).
-See the options in action at the [markdown-it demo](https://markdown-it.github.io/)
-(select or deselect `typographer`).
-Defaults to false.
-
-### File Extensions
-
-By default, only files ending in `.mdoc` and `.md` are preprocessed.
-To set other file extensions, override default extensions by setting the `extensions` option.
-
-Remember to include your custom file extensions in the Svelte Kit config `extensions` array too.
-
-```javascript
-import { markdoc } from "markdoc-svelte";
-
-/** @type {import('@sveltejs/kit').Config} */
-const config = {
-  extensions: [".svelte", ".md", ".markdown"],
-  preprocess: [
-    markdoc({
-      extensions: [".md", ".markdown"],
-    }),
-  ],
-};
-```
-
-### Layout
-
-To give your processed Markdoc a layout, pass the path to the layout file:
-
-```javascript
-import { markdoc } from "markdoc-svelte";
-
-/** @type {import('@sveltejs/kit').Config} */
-const config = {
-  extensions: [".svelte", ".md"],
-  preprocess: [
-    markdoc({
-      layout: "/path/to/layout.svelte",
-    }),
-  ],
-};
-```
-
-[Frontmatter](#frontmatter) in YAML format is automatically passed to your layout as props.
-The content is passed as children that can then be rendered.
-
-```svelte
-<script lang="ts">
-  let {
-    children,
-    title = '',
-  } = $props()
-</script>
-
-<h1>{ title }</h1>
-
-<!-- Article content -->
-{@render children?.()}
-```
-
-### Schema path
-
-To define Markdoc options, you can use a directory that holds multiple options.
-You can define each option as a single file or a directory with an `index.js` file that exports the option.
-Except for partials, which is a directory holding Markdoc files.
+You can define each schema part as a single file or a directory with an index.ts or index.js file that exports it. Except for partials, which is a directory holding Markdoc files.
 
 Example structure:
 
-```tree
-markdoc
-├── functions.js
-├── nodes
-│   ├── heading.js
-│   ├── index.js
-│   └── callout.js
-├── partials
-│   ├── content.mdoc
-│   └── more-content.mdoc
-├── tags.js
-└── variables.js
+```
+| markdoc/
+|-- nodes.ts
+|-- tags/
+|   |-- marquee.ts
+|   |-- decorate.ts
+|   |-- index.ts
+|-- functions.ts
+|-- variables.ts
+|-- partials/
+|   |-- content.mdoc
+|   |-- post.mdoc
 ```
 
-By default, the preprocessor looks for your Markdoc schema definition in a `./markdoc` directory at the app root.
-To use a different path, define the directory in the options as a relative path.
-
-Both `/markdoc` and `./markdoc` formats are supported (both are treated as relative to the project root).
+You can specify a custom directory path relative to the Svelte project root. 
 
 ```javascript
 import { markdoc } from "markdoc-svelte";
@@ -364,19 +275,206 @@ const config = {
   preprocess: [
     markdoc({
       schema: "./path/to/schema/directory",
-      // or schema: "/path/to/schema/directory", // both work the same
     }),
   ],
 };
 ```
 
-### Markdoc config options
+### Nodes
 
-In addition to the option to include Markdoc configuration as a single directory,
-you can pass each option individually:
+Import an object of nodes to use as Markdoc Nodes. These customize how standard Markdown elements are rendered. Overwrites nodes with the same name from 'schema' directory.
 
-- [Functions](#functions)
-- [Nodes](#nodes)
-- [Partials](#partials)
-- [Tags](#tags)
-- [Variables](#variables)
+```javascript
+import { markdoc } from "markdoc-svelte";
+import { link } from "./markdoc/nodes/link.js";
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+  preprocess: [
+    markdoc({
+      nodes: { link },
+    }),
+  ],
+};
+```
+
+### Tags
+
+Import an object of tags to use as Markdoc Tags. These extend Markdown elements to do more. Overwrites tags with the same name from 'schema' directory.
+
+```javascript
+import { markdoc } from "markdoc-svelte";
+import { button } from "./markdoc/tags/button.js";
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+  preprocess: [
+    markdoc({
+      tags: { button },
+    }),
+  ],
+};
+```
+
+### Variables
+
+Import an object of variables to use as Markdoc Variables. These customize content during the build. Overwrites variables with the same name from 'schema' directory.
+
+```javascript
+import { markdoc } from "markdoc-svelte";
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+  preprocess: [
+    markdoc({
+      variables: { 
+        flags: { best_feature_flag: true },
+        site_name: "My Site"
+      },
+    }),
+  ],
+};
+```
+
+### Functions
+
+Import an object of functions to use as Markdoc Functions. These transform content during rendering. Overwrites functions with the same name from 'schema' directory.
+
+```javascript
+import { markdoc } from "markdoc-svelte";
+
+const uppercase = {
+  transform(parameters) {
+    const string = parameters[0];
+    return typeof string === "string" ? string.toUpperCase() : string;
+  },
+};
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+  preprocess: [
+    markdoc({
+      functions: { uppercase },
+    }),
+  ],
+};
+```
+
+### Partials
+
+Specify a directory to import files with 'extensions' as Markdoc Partials. Default is to load partials from 'schema' directory. Overwrites partials with the same name from 'schema' directory.
+
+```javascript
+import { markdoc } from "markdoc-svelte";
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+  preprocess: [
+    markdoc({
+      partials: "./markdoc/partials",
+    }),
+  ],
+};
+```
+
+### Components
+
+Specify a directory to import Svelte components to customize Markdoc Nodes and Tags. Use import paths and aliases that Svelte can resolve.
+
+```javascript
+import { markdoc } from "markdoc-svelte";
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+  preprocess: [
+    markdoc({
+      components: "$lib/markdoc/components",
+    }),
+  ],
+};
+```
+
+### Layout
+
+Specify a Svelte component to use as a layout for the Markdoc file. Use import paths and aliases that Svelte can resolve. [Frontmatter](#frontmatter) in YAML format is automatically passed to your layout as props.
+
+```javascript
+import { markdoc } from "markdoc-svelte";
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+  preprocess: [
+    markdoc({
+      layout: "$lib/layouts/MarkdocLayout.svelte",
+    }),
+  ],
+};
+```
+
+### Comments
+
+Enable adding Markdown comments to your documents. Whether to allow [Markdown comment syntax](https://spec.commonmark.org/0.30/#example-624) to hide comments from the rendered output.
+
+```javascript
+import { markdoc } from "markdoc-svelte";
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+  preprocess: [
+    markdoc({
+      comments: false,
+    }),
+  ],
+};
+```
+
+### Linkify
+
+Enable autoconvert URL-like text to links. When enabled, URLs in your content will automatically become clickable links.
+
+```javascript
+import { markdoc } from "markdoc-svelte";
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+  preprocess: [
+    markdoc({
+      linkify: true,
+    }),
+  ],
+};
+```
+
+### Typographer
+
+Enable some language-neutral replacement + quotes beautification. Choose whether to turn on typographic replacements from [markdown-it](https://github.com/markdown-it/markdown-it).
+
+```javascript
+import { markdoc } from "markdoc-svelte";
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+  preprocess: [
+    markdoc({
+      typographer: true,
+    }),
+  ],
+};
+```
+
+### Validation Level
+
+Sets the level invalid parsing will throw a preprocess error. This preprocessor validates whether the Markdoc is valid. By default, it throws an error on files for errors at the `error` or `critical` level. Possible values in ascending order: `debug`, `info`, `warning`, `error`, `critical`.
+
+```javascript
+import { markdoc } from "markdoc-svelte";
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+  preprocess: [
+    markdoc({
+      validationLevel: "warning",
+    }),
+  ],
+};
+```
