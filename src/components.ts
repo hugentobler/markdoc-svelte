@@ -1,4 +1,5 @@
 import type { RenderableTreeNode } from "@markdoc/markdoc";
+import { normalizePath } from "vite";
 
 /**
  * Traverses the Markdoc RenderableTreeNode AST to find all Svelte component names
@@ -59,9 +60,10 @@ export const getComponentImports = (
 ): string => {
   let importStatements = "";
   for (const componentName of usedSvelteComponentNames) {
-    // We'll use POSIX style paths (forward slashes) for consistency
-    const componentPath =
-      `${componentDirPath}/${componentName}.svelte`.replace(/\/\//g, "/");
+    // Use Vite's normalizePath for proper cross-platform path handling
+    const componentPath = normalizePath(
+      `${componentDirPath}/${componentName}.svelte`
+    );
 
     // Generate the import statement
     importStatements += `\timport ${componentName} from '${componentPath}';\n`;

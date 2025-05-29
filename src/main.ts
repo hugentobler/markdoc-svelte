@@ -151,7 +151,7 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       const transformedContent = Markdoc.transform(ast, fullConfig);
 
       // --- Render Markdoc AST to Svelte ---
-      const svelteContent = render(transformedContent);
+      let svelteContent = render(transformedContent);
 
       // --- Define frontmatter string for Svelte ---
       // Declare module context, destructure frontmatter object
@@ -175,6 +175,9 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
         allScriptImports += `\timport Layout_MARKDOC from '${layoutPath}';\n`;
       }
 
+      allScriptImports += `\timport image from "../images/it's-easy-to-submit-claims-online!.jpg?enhanced";\n`;
+      svelteContent = '<enhanced:img src={image} />' + svelteContent;
+
       const scriptTag = allScriptImports ? `<script>\n${allScriptImports}</script>\n` : "";
 
       // --- Define layout wrapper strings ---
@@ -191,6 +194,8 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
         layoutWrapperOpen +
         svelteContent +
         layoutWrapperClose;
+      
+      console.log("code", code);
 
       return {
         code: code,

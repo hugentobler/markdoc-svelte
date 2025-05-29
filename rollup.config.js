@@ -9,7 +9,7 @@ export default [
       { file: "dist/main.cjs.js", format: "cjs", sourcemap: true },
       { file: "dist/main.mjs", format: "esm", sourcemap: true },
     ],
-    external: ["@markdoc/markdoc", "fs", "markdown-it", "path", "yaml"],
+    external: ["@markdoc/markdoc", "fs", "path", "svelte", "vite", "yaml"],
     plugins: [typescript(), nodeResolve()],
   },
   {

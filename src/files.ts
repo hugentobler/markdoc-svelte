@@ -1,6 +1,8 @@
 import FS from "fs";
 import Path from "path";
 
+import { normalizePath } from "vite";
+
 import log from "./logs.ts";
 
 /**
@@ -16,11 +18,11 @@ export const makePathProjectRelative = (path: string): string => {
   return path;
 };
 
-// Helper to normalize path separators to POSIX style (forward slashes)
+// Helper to normalize path separators using Vite's normalizePath
 export const normalizeAbsolutePath = (absolutePath: string): string => {
   // Ensure the input is treated as absolute before normalizing
   const resolvedPath = Path.resolve(absolutePath);
-  return resolvedPath.split(Path.sep).join(Path.posix.sep);
+  return normalizePath(resolvedPath);
 };
 
 /**
