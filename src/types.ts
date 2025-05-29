@@ -101,6 +101,10 @@ export interface MarkdocModule {
    */
   default: Component;
   /**
+   * The slug of the Markdoc file.
+   */
+  slug: string;
+  /**
    * Optional frontmatter extracted from the Markdoc file.
    */
   frontmatter?: { [key: string]: string };

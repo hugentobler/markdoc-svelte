@@ -1,3 +1,5 @@
+import { basename, extname } from "path";
+
 import Markdoc from "@markdoc/markdoc";
 import type { Config, ParserArgs } from "@markdoc/markdoc";
 import type { PreprocessorGroup } from "svelte/compiler";
@@ -33,7 +35,7 @@ const validOptionKeys: (keyof Options)[] = [
  * @param {Options} options - Configuration options for the Markdoc preprocessor
  * @returns {PreprocessorGroup} A Svelte preprocessor for Markdoc files
  */
-export const markdoc = (options: Options = {}): PreprocessorGroup => {
+export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
   // Warn about invalid options
   for (const key in options) {
     if (!validOptionKeys.includes(key as keyof Options)) {
@@ -151,16 +153,20 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
       const transformedContent = Markdoc.transform(ast, fullConfig);
 
       // --- Render Markdoc AST to Svelte ---
-      let svelteContent = render(transformedContent);
+      const svelteContent = render(transformedContent);
 
       // --- Define frontmatter string for Svelte ---
-      // Declare module context, destructure frontmatter object
-      const scriptModuleTag = isFrontmatter
-        ? `<script module>\n` +
-          `\texport const frontmatter = ${JSON.stringify(frontmatter)};\n` +
-          `\tconst { ${Object.keys(frontmatter).join(", ")} } = frontmatter;\n` +
-          `</script>\n`
-        : ``;
+      // Extract filename without path and extension
+      const baseFilename = filename ? basename(filename, extname(filename)) : '';
+            // Always declare module context, include filename and optionally frontmatter
+      const scriptModuleTag = 
+        `<script module>\n` +
+        `\texport const slug = "${baseFilename}";\n` +
+        (isFrontmatter 
+          ? `\texport const frontmatter = ${JSON.stringify(frontmatter)};\n` +
+            `\tconst { ${Object.keys(frontmatter).join(", ")} } = frontmatter;\n`
+          : '') +
+        `</script>\n`;
 
       // --- Generate component import statements ---
       const usedSvelteComponentNames = extractUsedSvelteComponents(transformedContent);
@@ -174,9 +180,6 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
         }
         allScriptImports += `\timport Layout_MARKDOC from '${layoutPath}';\n`;
       }
-
-      allScriptImports += `\timport image from "../images/it's-easy-to-submit-claims-online!.jpg?enhanced";\n`;
-      svelteContent = '<enhanced:img src={image} />' + svelteContent;
 
       const scriptTag = allScriptImports ? `<script>\n${allScriptImports}</script>\n` : "";
 
@@ -195,7 +198,7 @@ export const markdoc = (options: Options = {}): PreprocessorGroup => {
         svelteContent +
         layoutWrapperClose;
       
-      console.log("code", code);
+      // console.log("code", code);
 
       return {
         code: code,
