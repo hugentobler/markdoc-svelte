@@ -198,8 +198,6 @@ export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
         svelteContent +
         layoutWrapperClose;
       
-      // console.log("code", code);
-
       return {
         code: code,
         dependencies,

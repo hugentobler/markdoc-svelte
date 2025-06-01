@@ -1,6 +1,6 @@
 {
   "name": "markdoc-svelte",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "type": "module",
   "description": "A preprocessor to render Markdoc in Svelte",
   "exports": {
@@ -23,7 +23,7 @@
   "files": [
     "dist/"
   ],
-  "author": "Aaron Collier",
+  "author": "Aaron Collier, Christopher Hugentobler",
   "license": "MIT",
   "dependencies": {
     "@markdoc/markdoc": "^0.5.2",
