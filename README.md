@@ -14,6 +14,7 @@ Process Markdown files into Svelte components using [Markdoc](https://markdoc.de
 - [Preprocessor Options](#preprocessor-options)
 - [Advanced](#advanced)
   - [Markdoc Limitations](#markdoc-limitations)
+  - [Table of Contents Example](#table-of-contents-example)
   - [@sveltejs/enhanced-img](#sveltejsenhanced-img)
 
 ## Install
@@ -393,6 +394,63 @@ This is a markdown file that will be processed by markdoc-svelte.
 ### Markdoc Limitations
 
 Markdoc has a few Markdown syntax limitations, see [Markdoc FAQ](https://markdoc.dev/docs/faq).
+
+### Table of Contents Example
+
+Slug is exported from each Markdoc module and is a convenient way to generate a table of contents without reaching into the document.
+
+Glob import Markdown Modules into a page's load function. For example in `src/routes/blog/+page.ts`:
+
+```typescript
+import type { MarkdocModule } from 'markdoc-svelte';
+
+import type { PageLoad } from './$types';
+
+const markdownModules = import.meta.glob('$lib/markdown/*.md');
+
+export const load: PageLoad = async () => {
+  const content = await Promise.all(
+    Object.values(markdownModules).map(async (importModule) => {
+      // Dynamically import each module
+      const module = (await importModule()) as MarkdocModule;
+      // Pass only slug and frontmatter to the page data
+      return {
+        slug: module.slug,
+        frontmatter: module.frontmatter
+      };
+    })
+  );
+  return { content };
+};
+```
+
+Then render a table of contents in `src/routes/blog/+page.svelte` with the slug and frontmatter:
+
+```svelte
+<script lang="ts">
+  import type { PageProps } from './$types';
+
+  let { data }: PageProps = $props();
+  const { content } = data;
+</script>
+
+<h1>Table of Contents</h1>
+<ul>
+  {#each content as item, i (item.slug)}
+    <li class={'item-' + i}>
+      <a href="/{item.slug}">
+        <h2>{item.frontmatter?.title || item.slug}</h2>
+        {#if item.frontmatter?.description}
+          <span>{item.frontmatter.description}</span>
+        {/if}
+        {#if item.frontmatter?.published}
+          <span>{item.frontmatter.published}</span>
+        {/if}
+      </a>
+    </li>
+  {/each}
+</ul>
+```
 
 ### @sveltejs/enhanced-img
 
