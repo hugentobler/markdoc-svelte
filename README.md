@@ -374,19 +374,19 @@ This is a markdown file that will be processed by markdoc-svelte.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `extensions` | string[] | `[".mdoc", ".md"]` | Files to process with Markdoc |
-| `schema` | string | `["./markdoc", "./src/markdoc"]` | Schema directory path |
+| `extensions` | string[] | ".mdoc", ".md" | Files to process with Markdoc |
+| `schema` | string | "./markdoc", "./src/markdoc" | Schema directory path |
 | `nodes` | Config['nodes'] | - | Nodes config |
 | `tags` | Config['tags'] | - | Tags config |
 | `variables` | Config['variables'] | - | Variables config |
 | `functions` | Config['functions'] | - | Functions config |
 | `partials` | string | - | Partials directory path |
-| `components` | string | `"$lib/components"` | Svelte components directory for custom nodes and tags |
+| `components` | string | "$lib/components" | Svelte components directory for custom nodes and tags |
 | `layout` | string | - | Default layout for all processed Markdown files |
-| `comments` | boolean | `true` | Enable Markdown comments |
-| `linkify` | boolean | `false` | Auto-convert URLs to links |
-| `typographer` | boolean | `false` | Enable typography replacements |
-| `validationLevel` | string | `"error"` | Validation strictness level | 
+| `comments` | boolean | true | Enable Markdown comments |
+| `linkify` | boolean | false | Auto-convert URLs to links |
+| `typographer` | boolean | false | Enable typography replacements |
+| `validationLevel` | string | "error" | Validation strictness level | 
 
 ## Advanced
 
@@ -443,3 +443,6 @@ Then in `src/lib/components/EnhancedImage.svelte`:
     <img src={src} {alt} {...restProps} />
 {/if}
 ```
+
+Note: At the time of writing, the enhanced-img plugin is no longer a Svelte preprocessor. It is a vite plugin that runs before the Svelte preprocessor. Glob importing images is the only solution because <enhanced-img> cannot be statically analysed before preproessing. Glob importing images will result in the map of all images to be bundled into each Markdown module whether it uses images or not.
+
