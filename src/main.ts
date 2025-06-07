@@ -8,6 +8,7 @@ import YAML from "yaml";
 import { getComponentImports, extractUsedSvelteComponents } from "./components.ts";
 import { handleValidationErrors } from "./errors.ts";
 import { findFirstDirectory, makePathProjectRelative } from "./files.ts";
+import { collectHeadings } from "./headings.ts";
 import log from "./logs.ts";
 import loadPartials from "./partials.ts";
 import render from "./render.ts";
@@ -100,13 +101,10 @@ export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
 
       // --- Parse Frontmatter ---
       const isFrontmatter = Boolean(ast.attributes.frontmatter);
-      log.debug(`Frontmatter detected: ${isFrontmatter}`);
-      log.debug(`Raw frontmatter content: ${ast.attributes.frontmatter}`);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const frontmatter: Record<string, unknown> = isFrontmatter
         ? YAML.parse(ast.attributes.frontmatter as string)
         : {};
-      log.debug(`Parsed frontmatter: ${JSON.stringify(frontmatter)}`);
 
       // --- Prepare to load Schemas & Partials ---
       const dependencies: string[] = [];
@@ -155,10 +153,13 @@ export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
       // --- Tranform AST with loaded config ---
       const transformedContent = Markdoc.transform(ast, fullConfig);
 
+      // --- Collect headings from transformed content ---
+      const headings = collectHeadings(transformedContent);
+
       // --- Render Markdoc AST to Svelte ---
       const svelteContent = render(transformedContent);
 
-      // --- Define frontmatter string for Svelte ---
+      // --- Define frontmatter and headings string for Svelte ---
       // Extract filename without path and extension
       const baseFilename = filename ? basename(filename, extname(filename)) : '';
             // Always declare module context, include filename and optionally frontmatter
@@ -169,6 +170,7 @@ export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
           ? `\texport const frontmatter = ${JSON.stringify(frontmatter)};\n` +
             `\tconst { ${Object.keys(frontmatter).join(", ")} } = frontmatter;\n`
           : '') +
+        (headings.length > 0 ? `\texport const headings = ${JSON.stringify(headings)};\n` : '') +
         `</script>\n`;
 
       // --- Generate component import statements ---
@@ -187,9 +189,9 @@ export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
       const scriptTag = allScriptImports ? `<script>\n${allScriptImports}</script>\n` : "";
 
       // --- Define layout wrapper strings ---
-      // Pass frontmatter to the layout component if it exists
+      // Pass frontmatter and headings to the layout component if they exist
       const layoutWrapperOpen = layoutPath
-        ? `<Layout_MARKDOC${isFrontmatter ? ` {...frontmatter}` : ""}>\n`
+        ? `<Layout_MARKDOC${isFrontmatter ? ` {...frontmatter}` : ""}${headings.length > 0 ? ` headings={headings}` : ""}>\n`
         : "";
       const layoutWrapperClose = layoutPath ? `\n</Layout_MARKDOC>` : "";
 
