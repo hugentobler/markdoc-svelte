@@ -131,6 +131,7 @@ export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
         const { config, deps } = loadPartials(partialsPath, extensions, true);
         if (config) partialsFromPartials = config;
         dependencies.push(...deps);
+      }
 
       // Assemble full config
       const fullConfig: Config = {
@@ -152,6 +153,9 @@ export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
       // Needs to be awaited to handle async functions in schema (such as nodes)
       // eslint-disable-next-line @typescript-eslint/await-thenable
       const transformedContent = await Markdoc.transform(ast, fullConfig);
+
+      // --- Collect headings from transformed content ---
+      const headings = collectHeadings(transformedContent);
 
       // Render Markdoc AST to Svelte
       const svelteContent = render(transformedContent);
