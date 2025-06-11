@@ -1,4 +1,5 @@
 import Markdoc from '@markdoc/markdoc';
+
 export default {
   heading: {
     render: "h1",

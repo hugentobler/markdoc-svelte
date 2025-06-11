@@ -41,12 +41,12 @@ export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
   for (const key in options) {
     if (!validOptionKeys.includes(key as keyof Options)) {
       log.warn(
-        `Invalid option "${key}" provided and ignored.  Please check the documentation for valid options.`,
+        `Invalid option "${key}" provided and ignored. Check the documentation for valid options.`,
       );
     }
   }
 
-  // --- Set defaults ---
+  // Set defaults
   const extensions =
     options.extensions && options.extensions.length > 0
       ? options.extensions
@@ -71,15 +71,15 @@ export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
   return {
     name: "markdoc-svelte",
     markup: async ({ content, filename }) => {
-      // --- Check if file is a Markdoc file ---
+      // Check if file is a Markdoc file
       if (
         !filename ||
         !extensions.find((extension) => filename.endsWith(extension))
       )
         return;
 
-      // --- Tokenization ---
-      // Markdown-It options https://github.com/markdown-it/markdown-it?tab=readme-ov-file#init-with-presets-and-options
+      // Tokenization
+      // markdown-it options https://github.com/markdown-it/markdown-it?tab=readme-ov-file#init-with-presets-and-options
       const markdownItConfig = {
         linkify,
         typographer,
@@ -91,31 +91,31 @@ export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
       });
       const tokens = tokenizer.tokenize(content);
 
-      // --- Parse to AST ---
+      // Parse to AST
       const parserConfig: ParserArgs = {
-        file: filename, // Debugging
-        location: true, // Debugging
-        slots: false, // TODO: Add support for slots?
+        file: filename,
+        location: true,
+        slots: false,
       };
       const ast = Markdoc.parse(tokens, parserConfig);
 
-      // --- Parse Frontmatter ---
+      // Parse frontmatter
       const isFrontmatter = Boolean(ast.attributes.frontmatter);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const frontmatter: Record<string, unknown> = isFrontmatter
         ? YAML.parse(ast.attributes.frontmatter as string)
         : {};
 
-      // --- Prepare to load Schemas & Partials ---
+      // Prepare to load schemas & partials
       const dependencies: string[] = [];
       let configFromSchema: Config = {};
       let partialsFromSchema: Config["partials"] = {};
       let partialsFromPartials: Config["partials"] = {};
 
-      // --- Discover optional schema directory ---
+      // Discover optional schema directory
       const schemaDir = findFirstDirectory(schemaPaths);
 
-      // --- Load Schemas and Partials from resolved schema directory ---
+      // Load schema and partials from resolved schema directory, if one exists
       if (schemaDir) {
         const { config, deps: schemaDeps } = await loadSchemas(schemaDir);
         configFromSchema = config;
@@ -126,43 +126,40 @@ export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
         dependencies.push(...deps);
       }
 
-      // --- Load Partials from specified partials directory ---
+      // Load partials from specified partials directory, if one exists
       if (partialsPath) {
         const { config, deps } = loadPartials(partialsPath, extensions, true);
         if (config) partialsFromPartials = config;
         dependencies.push(...deps);
-      }
 
-      // --- Assemble full config ---
+      // Assemble full config
       const fullConfig: Config = {
         // Start with base config loaded from the schema directory
-        // Merge in config passed as options
+        // Explicitly set options overwrite the base config
         nodes: { ...configFromSchema.nodes, ...nodes },
         tags: { ...configFromSchema.tags, ...tags },
         functions: { ...configFromSchema.functions, ...functions },
+        partials: { ...partialsFromSchema, ...partialsFromPartials },
         // Make $frontmatter available as variable
         variables: { ...configFromSchema.variables, ...variables, frontmatter },
-        // Merge partials: explicitly set partials overwrrite auto-loaded ones
-        partials: { ...partialsFromSchema, ...partialsFromPartials },
       };
 
-      // --- Validate Markdoc AST ---
+      // Validate Markdoc AST
       const errors = Markdoc.validate(ast, fullConfig);
       handleValidationErrors(errors, validationLevel, filename);
 
-      // --- Tranform AST with loaded config ---
-      const transformedContent = Markdoc.transform(ast, fullConfig);
+      // Tranform AST with loaded config
+      // Needs to be awaited to handle async functions in schema (such as nodes)
+      // eslint-disable-next-line @typescript-eslint/await-thenable
+      const transformedContent = await Markdoc.transform(ast, fullConfig);
 
-      // --- Collect headings from transformed content ---
-      const headings = collectHeadings(transformedContent);
-
-      // --- Render Markdoc AST to Svelte ---
+      // Render Markdoc AST to Svelte
       const svelteContent = render(transformedContent);
 
-      // --- Define frontmatter and headings string for Svelte ---
+      // Define frontmatter string for Svelte
       // Extract filename without path and extension
       const baseFilename = filename ? basename(filename, extname(filename)) : '';
-            // Always declare module context, include filename and optionally frontmatter
+      // Declare module context, including filename and optionally frontmatter
       const scriptModuleTag = 
         `<script module>\n` +
         `\texport const slug = "${baseFilename}";\n` +
@@ -173,29 +170,32 @@ export const markdocPreprocess = (options: Options = {}): PreprocessorGroup => {
         (headings.length > 0 ? `\texport const headings = ${JSON.stringify(headings)};\n` : '') +
         `</script>\n`;
 
-      // --- Generate component import statements ---
+      // Generate component import statements
       const usedSvelteComponentNames = extractUsedSvelteComponents(transformedContent);
       const componentImportStatements = getComponentImports(usedSvelteComponentNames, componentsPath);
 
-      // --- Construct script tag content ---
+      // Construct script tag content
       let allScriptImports = componentImportStatements;
+      // Check if layout set explicitly
       if (layoutPath) {
+        // Add a line break if there are import statements
         if (allScriptImports && allScriptImports.trim() !== "") {
           allScriptImports += "\n";
         }
+        // Add the layout as an import
         allScriptImports += `\timport Layout_MARKDOC from '${layoutPath}';\n`;
       }
-
+      // Place it all within a script tag
       const scriptTag = allScriptImports ? `<script>\n${allScriptImports}</script>\n` : "";
 
-      // --- Define layout wrapper strings ---
-      // Pass frontmatter and headings to the layout component if they exist
+      // If layout is passed explicitly, add it as a wrapping component
+      // If frontmatter or headings exists, pass them to the layout component
       const layoutWrapperOpen = layoutPath
         ? `<Layout_MARKDOC${isFrontmatter ? ` {...frontmatter}` : ""}${headings.length > 0 ? ` headings={headings}` : ""}>\n`
         : "";
       const layoutWrapperClose = layoutPath ? `\n</Layout_MARKDOC>` : "";
 
-      // --- Assemble final Svelte code ---
+      // Assemble final Svelte code
       const code =
         scriptModuleTag +
         scriptTag +

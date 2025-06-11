@@ -115,4 +115,3 @@ export interface MarkdocModule {
    */
   headings?: Heading[];
 }
-
