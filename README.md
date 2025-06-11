@@ -24,8 +24,9 @@ Use Markdoc defaults out of the box or configure Markdoc schema to your needs.
   - [Variables](#variables)
 - [Advanced](#advanced)
   - [Markdoc limitations](#markdoc-limitations)
-  - [Table of contents example](#table-of-contents-example)
+  - [Index page example](#index-page-example)
   - [@sveltejs/enhanced-img](#sveltejsenhanced-img)
+  - [Page headings and ids](#page-headings-and-ids)
 
 ## Install
 
@@ -520,9 +521,9 @@ This is published on the {% $site.name %} site.
 
 Markdoc has a few Markdown syntax limitations, see [Markdoc FAQ](https://markdoc.dev/docs/faq).
 
-### Table of contents example
+### Index page example
 
-Slug is exported from each Markdoc module and is a convenient way to generate a table of contents without reaching into the document.
+Slug is exported from each Markdoc module and is a convenient way to generate an index page without reaching into the document.
 
 Glob import Markdown Modules into a page's load function. For example in `src/routes/blog/+page.ts`:
 
@@ -628,3 +629,35 @@ Then in `src/lib/components/EnhancedImage.svelte`:
 ```
 
 Note: At the time of writing, the enhanced-img plugin is no longer a Svelte preprocessor. It is a vite plugin that runs before the Svelte preprocessor. Glob importing images is the only solution because <enhanced-img> cannot be statically analysed before preproessing. Glob importing images will result in the map of all images to be bundled into each Markdown module whether it uses images or not.
+
+### Page headings and ids
+
+Imported markdoc pages automatically export a `headings` property that contains a list of all the headings in the page and their ids. This can be used to generate a table of contents for the page.
+
+```svelte
+<script lang="ts">
+  import type { PageProps } from './$types';
+
+  let { data }: PageProps = $props();
+  const { frontmatter, headings } = data.page;
+
+  // Filter only h1 and h2 headings
+  const filteredHeadings = headings?.filter((heading) => heading.level <= 2) ?? [];
+</script>
+
+<svelte:head>
+  <title>{data.page.frontmatter?.title ?? 'Undefined title'}</title>
+</svelte:head>
+
+{#if filteredHeadings.length > 0}
+  <ul>
+    {#each filteredHeadings as heading}
+      <li>
+        <a href={`#${heading.id}`}>{heading.text}</a>
+      </li>
+    {/each}
+  </ul>
+{/if}
+
+<data.page.default />
+```
